@@ -97,6 +97,22 @@ async def desktop_case(args, assets, shutdown):
             assert (await client.get(url + "/private.txt")).status == 404
             for headers in ({"Origin": "tauri://localhost"}, {"Host": "foreign.example"}):
                 assert (await client.get(url + "/api/info", headers=headers)).status == 403
+            ide_project = dict((await (await client.get(url + "/api/project")).json())["project"],
+                               firmware=str(args.elf), gdb_port=4321)
+            save_request = {"format": "clion", "project": ide_project}
+            for headers in ({}, {"Origin": "null"}, {"Origin": "https://foreign.example"}):
+                assert (await client.post(url + "/api/ide/save", json=save_request, headers=headers)).status == 403
+            # Unsupported format, caller paths, and caller content are refused
+            # before any native dialog can open.
+            for payload in (dict(save_request, format="other"),
+                            dict(save_request, path="arbitrary.xml"),
+                            dict(save_request, text="arbitrary content")):
+                assert (await client.post(url + "/api/ide/save", json=payload,
+                                          headers={"Origin": url})).status == 422
+            assert (await client.post(url + "/api/ide/save", json={"format": "clion", "project": dict(ide_project, firmware=None)},
+                                      headers={"Origin": url})).status == 400
+            preview = await client.post(url + "/api/ide", json=ide_project)
+            assert preview.status == 200 and (await preview.json())["clion"]["target"] == "127.0.0.1:4321"
             async with client.ws_connect(url + "/api/ws", origin=url) as ws:
                 async def command(identifier, action, generation):
                     await ws.send_json({"id": identifier, "session_id": generation, "action": action, "args": {}})

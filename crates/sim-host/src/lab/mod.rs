@@ -2,6 +2,8 @@
 pub mod channels;
 pub mod command;
 mod firmware_image;
+#[cfg(feature = "desktop-backend")]
+mod ide_export;
 pub mod input;
 pub mod interactive;
 #[cfg(feature = "lab-session")]

@@ -14,7 +14,7 @@
 
 界面、HTTP 与 WebSocket 使用同一个 `http://127.0.0.1:<port>` 地址。成功启动时 stdout 给出 `lab-ready` JSON，协议标识为 `dm-mc02-lab/v1`；日志写入 stderr。保持 stdin 打开，关闭 stdin 会让后台结束实验并退出。`GET /api/info` 提供协议版本和能力，完整约定见仓库根目录的 [LAB_PROTOCOL.md](../../../docs/LAB_PROTOCOL.md)。
 
-界面使用 `/api/state`、`/api/project`、`/api/firmware`、`/api/ide` 和 `/api/ws`。WebSocket 命令保留 `{id, session_id, action, args}` 封套；会话代次和命令结果由后端确定。连接断开时界面保留记录、清除待处理请求并重连。通过“打开 ELF”选择固件；本地路径与自动重载在“设置”中配置。
+界面使用 `/api/state`、`/api/project`、`/api/firmware`、`/api/ide/save` 和 `/api/ws`。IDE 保存请求只含格式和 LabProject，后台负责生成配置、打开原生另存为窗口并写入。`/api/ide` 保留配置预览接口。WebSocket 命令保留 `{id, session_id, action, args}` 封套；会话代次和命令结果由后端确定。连接断开时界面保留记录、清除待处理请求并重连。通过“打开 ELF”选择固件；本地路径与自动重载在“设置”中配置。
 
 ## 离线资源与许可证
 
@@ -32,7 +32,7 @@
 
 `tests/lab_uart_console_browser.py` 验证真实 xterm 的跨 chunk UTF-8、ANSI、HEX、独立 UART、清空与积压恢复。`tests/lab_console_browser.py` 使用真实桌面后台和同仓界面，验证 UART/CAN/ADC/USER、固件上传、暂停、恢复、重载与停止。后端的 HTTP/WS、控制权及生命周期测试在根目录 `crates/sim-host/tests/`。
 
-`tests/lab_ide_export_browser.py --backend <后台程序> --elf <本地ELF> --output build/ide-export` 验证三种配置内容、另存为调用、取消和写入失败，默认使用已安装的 Microsoft Edge。原生另存为窗口验收见 [DESKTOP.md](DESKTOP.md)。
+`tests/lab_ide_export_browser.py --backend <后台程序> --elf <本地ELF> --output build/ide-export` 拦截专用保存请求，验证三种格式的请求内容，以及保存、取消、写入失败和缺少调试条件时的界面反馈，默认使用已安装的 Microsoft Edge。配置文本和原子写入由后台单元测试验证；真实原生另存为窗口与文件内容验收见 [DESKTOP.md](DESKTOP.md)。
 
 从 `apps/lab` 执行：
 

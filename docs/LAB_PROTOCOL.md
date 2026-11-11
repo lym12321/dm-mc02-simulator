@@ -63,7 +63,7 @@ Releases preserve the third-party notices in `apps/lab/src/vendor/licenses/`.
   "protocol": "dm-mc02-lab/v1",
   "backend_version": "0.1.0",
   "capabilities": [
-    "project", "firmware-upload", "ide-export", "websocket-controller",
+    "project", "firmware-upload", "ide-export", "native-ide-save", "websocket-controller",
     "external-assets", "stdin-shutdown"
   ]
 }
@@ -93,3 +93,25 @@ replies carry the current session generation. After `load`, subsequent commands 
 stop the live board. Disconnect releases momentary inputs while preserving the
 Lab session; the next controller can observe and stop it. Firmware uploads are
 limited to one nonempty file of at most 64 MiB and require an inactive session.
+
+## Save an IDE configuration
+
+`POST /api/ide` remains the JSON configuration preview. The desktop's export
+button uses `POST /api/ide/save` instead:
+
+```json
+{"format":"clion","project":{"schema":"sim/lab-project/v1","firmware":"C:/firmware/app.elf","gdb_port":1234}}
+```
+
+`format` is `vscode`, `clion`, or `gdb`; `project` follows the existing strict
+LabProject schema. The endpoint requires an Origin matching `http://{Host}`.
+It accepts neither a destination path nor file contents. The backend generates
+the selected configuration and opens a native Save As dialog. Only the file
+chosen in that dialog is replaced, after the complete contents are written and
+synced. A second simultaneous export receives HTTP 409.
+
+Successful saving returns `{"status":"saved","path":"<chosen path>"}`. Closing
+the dialog without saving returns `{"status":"cancelled"}` and leaves files
+unchanged. Write failures return an error response. Dialogs run outside the
+simulation and HTTP runtime threads; desktop shutdown cancels the waiting
+request and continues the normal backend cleanup.

@@ -1,86 +1,55 @@
 #!/usr/bin/env python3
-"""Exercise IDE export against the real backend, with a deterministic save picker."""
+"""Verify the frontend's restricted IDE-save request and response handling."""
 import argparse
 import json
 from pathlib import Path
 import subprocess
-import xml.etree.ElementTree as ET
 
 from playwright.sync_api import sync_playwright
 
 
-PICKER = """(() => {
-  window.__pickerCalls = [];
-  window.__savedFiles = [];
-  window.__pickerMode = 'save';
-  window.showSaveFilePicker = async (options) => {
-    window.__pickerCalls.push(options);
-    if (window.__pickerMode === 'cancel') throw new DOMException('Cancelled', 'AbortError');
-    let contents;
-    return {name: options.suggestedName, createWritable: async () => ({
-      write: async (text) => {
-        if (window.__pickerMode === 'write-error') throw new Error('Disk is full');
-        contents = text;
-      },
-      close: async () => window.__savedFiles.push({name: options.suggestedName, contents}),
-      abort: async () => { window.__abortedWrite = true; },
-    })};
-  };
-})();"""
+FILENAMES = {"vscode": "launch.json", "clion": "DM-MC02.run.xml", "gdb": "attach.gdb"}
 
 
-def check_exports(page, firmware):
+def check_exports(page, firmware, requests, reply_mode, output):
     page.wait_for_function("!document.querySelector('#upload-button').disabled")
     page.locator("#settings-button").click()
     page.locator("#settings-dialog mdui-collapse-item").first.locator(".header").click()
     page.evaluate("firmware => {document.querySelector('#project-firmware').value=firmware; document.querySelector('#project-gdb').checked=true; document.querySelector('#project-gdb-port').value='4321';}", str(firmware))
-    for index, format in enumerate(("vscode", "clion", "gdb"), 1):
+    for format, filename in FILENAMES.items():
         page.evaluate("format => {document.querySelector('#ide-format').value=format;}", format)
         page.locator("#ide-download").click()
-        page.wait_for_function("count => window.__savedFiles.length === count", arg=index, timeout=5000)
-        assert "已保存" in page.locator("#ide-export-status").inner_text()
-    saved = page.evaluate("window.__savedFiles")
-    assert [item["name"] for item in saved] == ["launch.json", "DM-MC02.run.xml", "attach.gdb"]
-    vscode = json.loads(saved[0]["contents"])["configurations"][0]
-    assert vscode["type"] == "cortex-debug" and vscode["servertype"] == "external"
-    assert vscode["gdbTarget"] == "127.0.0.1:4321"
-    assert vscode["executable"] == str(firmware)
-    configuration = ET.fromstring(saved[1]["contents"]).find("configuration")
-    assert configuration is not None and configuration.attrib["name"] == "DM-MC02"
-    assert configuration.attrib["type"] == "CLion_Remote"
-    assert configuration.attrib["factoryName"] == "Remote Debug"
-    assert configuration.attrib["version"] == "1"
-    assert configuration.attrib["remoteCommand"] == "127.0.0.1:4321"
-    assert configuration.attrib["symbolFile"] == str(firmware).replace("\\", "/")
-    assert configuration.find("debugger").attrib == {"kind": "GDB", "isBundled": "true"}
-    assert "target remote 127.0.0.1:4321" in saved[2]["contents"]
-    symbols = str(firmware.with_name("symbols & debug.elf"))
-    page.evaluate("firmware => {document.querySelector('#project-firmware').value=firmware; document.querySelector('#ide-format').value='clion';}", symbols)
-    page.locator("#ide-download").click()
-    page.wait_for_function("window.__savedFiles.length === 4")
-    escaped = ET.fromstring(page.evaluate("window.__savedFiles[3].contents")).find("configuration")
-    assert escaped.attrib["symbolFile"] == symbols.replace("\\", "/")
-    page.evaluate("window.__pickerMode='cancel'")
+        page.wait_for_function("name => document.querySelector('#ide-export-status').textContent.startsWith('已保存 ' + name)", arg=filename, timeout=5000)
+        assert page.locator("#ide-export-status").get_attribute("title") == str(output / filename)
+        request = requests[-1]
+        assert set(request) == {"format", "project"}
+        assert request["format"] == format
+        assert request["project"]["schema"] == "sim/lab-project/v1"
+        assert request["project"]["firmware"] == str(firmware)
+        assert request["project"]["gdb_port"] == 4321
+    assert [request["format"] for request in requests] == ["vscode", "clion", "gdb"]
+    reply_mode["status"] = "cancelled"
     page.locator("#ide-download").click()
     page.wait_for_function("document.querySelector('#ide-export-status').textContent.includes('已取消')")
     assert page.locator("#ide-error").is_hidden()
-    assert page.evaluate("window.__savedFiles.length") == 4
-    page.evaluate("window.__pickerMode='write-error'")
+    assert not page.locator("#ide-download").is_disabled()
+    reply_mode["status"] = "error"
     page.locator("#ide-download").click()
     page.wait_for_function("document.querySelector('#ide-error').textContent.includes('Disk is full')")
-    assert page.evaluate("window.__abortedWrite")
-    assert page.evaluate("window.__savedFiles.length") == 4
-    calls = page.evaluate("window.__pickerCalls.length")
+    assert not page.locator("#ide-download").is_disabled()
+    assert page.locator("#ide-export-status").inner_text() == ""
+    calls = len(requests)
     page.evaluate("document.querySelector('#project-firmware').value=''")
     page.locator("#ide-download").click()
     page.wait_for_function("document.querySelector('#ide-error').textContent.includes('本地 ELF 路径')")
-    assert page.evaluate("window.__pickerCalls.length") == calls
+    assert len(requests) == calls
     page.evaluate("firmware => {document.querySelector('#project-firmware').value=firmware; document.querySelector('#project-gdb').checked=false;}", str(firmware))
     page.locator("#ide-download").click()
     page.wait_for_function("document.querySelector('#ide-error').textContent.includes('启用 GDB')")
-    assert page.evaluate("window.__pickerCalls.length") == calls
-    return {"exports": saved, "cancelled_without_write": True, "write_failure_reported": True,
-            "missing_local_symbols_reported": True, "gdb_requirement_reported": True}
+    assert len(requests) == calls
+    return {"save_requests": requests, "saved_response_reported": True, "cancel_reported": True,
+            "write_failure_reported": True, "missing_local_symbols_blocked": True,
+            "missing_gdb_blocked": True}
 
 
 def main():
@@ -90,8 +59,9 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--browser", default="msedge")
     args = parser.parse_args()
+    args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
-    report = {"status": "failed"}
+    report = {"status": "failed", "scope": "frontend request/response contract; native dialog and file contents are verified separately"}
     with (args.output / "backend.log").open("wb") as log:
         process = subprocess.Popen([str(args.backend.resolve()), "--port", "0", "--assets-dir", str(Path(__file__).resolve().parents[1] / "src")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log)
         try:
@@ -100,10 +70,27 @@ def main():
                 browser = playwright.chromium.launch(channel=args.browser, headless=True)
                 page = browser.new_page(viewport={"width": 1366, "height": 900})
                 errors = []
+                requests = []
+                reply_mode = {"status": "saved"}
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                page.add_init_script(PICKER)
+
+                def save_route(route, request):
+                    assert request.method == "POST"
+                    assert request.headers["content-type"] == "application/json"
+                    assert request.headers["origin"] == ready["url"].rstrip("/")
+                    value = request.post_data_json
+                    requests.append(value)
+                    mode = reply_mode["status"]
+                    if mode == "error":
+                        route.fulfill(status=500, json={"error": "Disk is full"})
+                    elif mode == "cancelled":
+                        route.fulfill(json={"status": "cancelled"})
+                    else:
+                        route.fulfill(json={"status": "saved", "path": str(args.output / FILENAMES[value["format"]])})
+
+                page.route("**/api/ide/save", save_route)
                 page.goto(ready["url"])
-                report.update(check_exports(page, args.elf.resolve()))
+                report.update(check_exports(page, args.elf.resolve(), requests, reply_mode, args.output))
                 page.screenshot(path=str(args.output / "settings.png"))
                 assert not errors, errors
                 report["page_errors"] = errors

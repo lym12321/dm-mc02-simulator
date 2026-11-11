@@ -1,5 +1,8 @@
 //! Loopback HTTP/WebSocket adapter; the session thread owns native execution.
-use super::session::{LabSession, SessionError, SessionOptions};
+use super::{
+    ide_export::{Document, SaveRequest},
+    session::{LabSession, SessionError, SessionOptions},
+};
 use axum::{
     body::Bytes,
     extract::{
@@ -117,6 +120,7 @@ struct WebState {
     assets: Assets,
     resources: Mutex<Resources>,
     upload_lock: tokio::sync::Mutex<()>,
+    ide_save_busy: Arc<AtomicBool>,
     cancelled: Arc<AtomicBool>,
 }
 fn is_active(value: &Value) -> bool {
@@ -126,29 +130,27 @@ fn is_active(value: &Value) -> bool {
     )
 }
 
+fn permitted_origin(request: &Request) -> std::result::Result<(), &'static str> {
+    let host = request
+        .headers()
+        .get(header::HOST)
+        .and_then(|value| value.to_str().ok())
+        .ok_or("local Host required")?;
+    let authority: axum::http::uri::Authority = host.parse().map_err(|_| "local Host required")?;
+    if !authority.host().eq_ignore_ascii_case("localhost") && authority.host() != "127.0.0.1" {
+        return Err("local Host required");
+    }
+    let origin = request.headers().get(header::ORIGIN);
+    if (request.uri().path() == "/api/ide/save" && origin.is_none())
+        || origin.is_some_and(|origin| origin != format!("http://{host}").as_str())
+    {
+        return Err("same-origin control required");
+    }
+    Ok(())
+}
 async fn local_origin(request: Request, next: Next) -> Response {
-    let upload = request.uri().path() == "/api/firmware";
-    let permitted = (|| {
-        let host = request
-            .headers()
-            .get(header::HOST)
-            .and_then(|value| value.to_str().ok())
-            .ok_or("local Host required")?;
-        let authority: axum::http::uri::Authority =
-            host.parse().map_err(|_| "local Host required")?;
-        if !authority.host().eq_ignore_ascii_case("localhost") && authority.host() != "127.0.0.1" {
-            return Err("local Host required");
-        }
-        if request
-            .headers()
-            .get(header::ORIGIN)
-            .is_some_and(|origin| origin != format!("http://{host}").as_str())
-        {
-            return Err("same-origin control required");
-        }
-        Ok(())
-    })();
-    let mut response = match permitted {
+    let closes_rejected_body = matches!(request.uri().path(), "/api/firmware" | "/api/ide/save");
+    let mut response = match permitted_origin(&request) {
         Ok(()) => next.run(request).await,
         Err(error) => HttpError(StatusCode::FORBIDDEN, error.into()).into_response(),
     };
@@ -159,9 +161,9 @@ async fn local_origin(request: Request, next: Next) -> Response {
         header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
     );
-    // Rejected uploads may retain an unread multipart suffix. Advertise close
-    // so the client cannot reuse that connection for its next firmware request.
-    if upload && !response.status().is_success() {
+    // A rejected body may remain unread. Do not reuse that connection for the
+    // next firmware or native-save request.
+    if closes_rejected_body && !response.status().is_success() {
         response
             .headers_mut()
             .insert(header::CONNECTION, HeaderValue::from_static("close"));
@@ -175,7 +177,7 @@ async fn info() -> Json<Value> {
     Json(json!({
         "protocol": PROTOCOL,
         "backend_version": env!("CARGO_PKG_VERSION"),
-        "capabilities": ["project", "firmware-upload", "ide-export", "websocket-controller", "external-assets", "stdin-shutdown"]
+        "capabilities": ["project", "firmware-upload", "ide-export", "native-ide-save", "websocket-controller", "external-assets", "stdin-shutdown"]
     }))
 }
 async fn project(State(state): State<Arc<WebState>>) -> Json<Value> {
@@ -192,6 +194,62 @@ async fn ide(
     Json(value): Json<Value>,
 ) -> std::result::Result<Json<Value>, HttpError> {
     state.session.ide_config(value).map(Json).map_err(bad)
+}
+
+struct IdeSavePermit(Arc<AtomicBool>);
+impl Drop for IdeSavePermit {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
+    }
+}
+
+async fn ide_save(
+    State(state): State<Arc<WebState>>,
+    Json(request): Json<SaveRequest>,
+) -> std::result::Result<Json<super::ide_export::Outcome>, HttpError> {
+    let preview = state
+        .session
+        .ide_config(serde_json::to_value(request.project).map_err(bad)?)
+        .map_err(bad)?;
+    let document = Document::from_preview(request.format, &preview);
+    state
+        .ide_save_busy
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .map_err(|_| {
+            HttpError(
+                StatusCode::CONFLICT,
+                "另一个导出正在等待保存，请先完成或取消。".into(),
+            )
+        })?;
+    let permit = IdeSavePermit(state.ide_save_busy.clone());
+    let cancelled = state.cancelled.clone();
+    let runtime = tokio::runtime::Handle::current();
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    // A standalone thread owns the dialog. Tokio shutdown never waits for it,
+    // and the session mutexes have all been released before the dialog opens.
+    std::thread::Builder::new()
+        .name("lab-ide-save".into())
+        .spawn(move || {
+            // The portal backend uses Tokio on Unix; native Windows dialogs
+            // are synchronous. Both stay off the HTTP runtime's worker thread.
+            let _runtime = runtime.enter();
+            let _permit = permit;
+            let _ = sender.send(document.save_native(&cancelled));
+        })
+        .map_err(internal)?;
+    tokio::select! {
+        result = receiver => result.map_err(internal)?.map(Json).map_err(internal),
+        _ = wait_for_shutdown(&state.cancelled) => Err(HttpError(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "应用正在退出，已取消导出。".into(),
+        )),
+    }
+}
+
+async fn wait_for_shutdown(cancelled: &AtomicBool) {
+    while !cancelled.load(Ordering::Acquire) {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
 }
 async fn index(State(state): State<Arc<WebState>>) -> Response {
     state.assets.response("index.html")
@@ -565,6 +623,7 @@ fn run_server(
         assets,
         resources: Mutex::new(Resources::default()),
         upload_lock: tokio::sync::Mutex::new(()),
+        ide_save_busy: Arc::new(AtomicBool::new(false)),
         cancelled: cancelled.clone(),
     });
     let router = Router::new()
@@ -581,6 +640,10 @@ fn run_server(
         .route(
             "/api/ide",
             post(ide).layer(DefaultBodyLimit::max(256 * 1024)),
+        )
+        .route(
+            "/api/ide/save",
+            post(ide_save).layer(DefaultBodyLimit::max(256 * 1024)),
         )
         .route("/api/firmware", post(upload))
         .route("/api/ws", get(websocket))
@@ -654,7 +717,32 @@ fn run_server(
 
 #[cfg(test)]
 mod tests {
-    use super::envelope;
+    use super::{envelope, permitted_origin};
+
+    #[test]
+    fn native_ide_save_requires_matching_origin_without_changing_preview_clients() {
+        for (path, origin, allowed) in [
+            ("/api/ide", None, true),
+            ("/api/ide/save", None, false),
+            ("/api/ide/save", Some("http://127.0.0.1:1234"), true),
+            ("/api/ide/save", Some("http://127.0.0.1:9999"), false),
+            ("/api/ide/save", Some("https://foreign.example"), false),
+            ("/api/ide/save", Some("null"), false),
+        ] {
+            let mut request = axum::http::Request::builder()
+                .uri(path)
+                .header("Host", "127.0.0.1:1234");
+            if let Some(origin) = origin {
+                request = request.header("Origin", origin);
+            }
+            let request = request.body(axum::body::Body::empty()).unwrap();
+            assert_eq!(
+                permitted_origin(&request).is_ok(),
+                allowed,
+                "{path} {origin:?}"
+            );
+        }
+    }
 
     #[test]
     fn envelope_requires_exact_fields_and_keeps_unicode_ids_and_object_args() {

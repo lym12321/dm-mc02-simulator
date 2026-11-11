@@ -17,11 +17,19 @@ from desktop_smoke import alive, close_window, descendants, identity, launch, wa
 
 
 def checkpoint(output, process, case, path=None):
-    value = {"pid": process.pid, "case": case}
+    backend_pids = []
+    for child in descendants(process.pid):
+        try:
+            if child.name() == "sim-lab-backend.exe":
+                backend_pids.append(child.pid)
+        except psutil.NoSuchProcess:
+            pass
+    assert len(backend_pids) == 1, backend_pids
+    value = {"pid": process.pid, "backend_pid": backend_pids[0], "case": case}
     if path is not None:
         value["save_path"] = str(path)
     (output / f"{case}-dialog.json").write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
-    print(f"Ready for native {case} dialog (PID {process.pid}); destination: {path or 'cancel'}", flush=True)
+    print(f"Ready for native {case} dialog (desktop PID {process.pid}, backend PID {backend_pids[0]}); destination: {path or 'cancel'}", flush=True)
 
 
 def main():
@@ -29,6 +37,7 @@ def main():
     parser.add_argument("--app", type=Path, required=True)
     parser.add_argument("--elf", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--check-close-during-save", action="store_true", help="open one more Save As dialog, then close the desktop window")
     args = parser.parse_args()
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -41,11 +50,12 @@ def main():
             context = browser.contexts[0]
             page = wait_until(lambda: next((page for page in context.pages if re.match(r"http://127\.0\.0\.1:\d+", page.url)), None), "Lab page")
             errors = []
+            save_requests = []
             page.on("pageerror", lambda error: errors.append(str(error)))
+            page.on("request", lambda request: save_requests.append(request.post_data_json) if request.url.endswith("/api/ide/save") else None)
             page.wait_for_function("!document.querySelector('#upload-button').disabled")
             assert page.locator("#uart-newline").evaluate("element=>element.value") == "crlf"
             assert page.evaluate("typeof window.__TAURI__") == "undefined"
-            assert page.evaluate("typeof showSaveFilePicker") == "function"
             page.locator("#firmware-input").set_input_files(str(firmware))
             page.wait_for_function("name => document.querySelector('#firmware-name').textContent.includes(name)", arg=firmware.name)
             page.locator("#settings-button").click()
@@ -78,9 +88,17 @@ def main():
             assert page.locator("#ide-error").is_hidden()
             assert all((args.output / name).read_bytes() == contents for name, contents in before.items())
             page.screenshot(path=str(args.output / "saved-and-cancelled.png"))
-            report.update({"files": list(before), "gdb_target": "127.0.0.1:4321", "firmware": str(firmware), "uart_default_ending": "crlf", "cancel_preserved_files": True, "no_native_ipc_exposed": True})
+            assert len(save_requests) == 3 and [request["format"] for request in save_requests] == ["vscode", "clion", "clion"]
+            assert all(set(request) == {"format", "project"} for request in save_requests)
+            report.update({"files": list(before), "gdb_target": "127.0.0.1:4321", "firmware": str(firmware), "uart_default_ending": "crlf", "cancel_preserved_files": True, "no_native_ipc_exposed": True, "save_endpoint": "/api/ide/save", "save_requests": save_requests})
             owned = [identity(child) for child in descendants(process.pid) if child.name() in ("sim-lab-backend.exe", "qemu-system-arm.exe")]
-            close_window(page, process, args.output, "ide-export")
+            if args.check_close_during_save:
+                page.locator("#ide-download").click()
+                checkpoint(args.output, process, "close-during-save")
+                report["closed_with_open_save_dialog"] = True
+                close_window(page, process, args.output, "ide-export-active-save")
+            else:
+                close_window(page, process, args.output, "ide-export")
             browser.close()
         wait_until(lambda: not any(alive(item) for item in owned), "owned backend cleanup", timeout=5)
         assert not errors, errors
