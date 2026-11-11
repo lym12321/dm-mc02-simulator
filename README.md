@@ -2,7 +2,7 @@
 
 运行 DM-MC02 / STM32H723 固件的桌面仿真软件。打开 ELF，观察 UART、CAN、ADC 和板卡状态，暂停、重载固件，或连接 ARM GDB 调试。
 
-Tauri Lab 是软件的主界面，与 Rust 仿真运行时、CLI、场景和发行工具一起维护在本仓库。[qemu-dm-mc02](https://github.com/lym12321/qemu-dm-mc02/tree/dm-mc02/v8.2.2) 提供独立的 QEMU 引擎，由子模块和 `qemu.lock` 固定版本。
+Tauri Lab 是软件的主界面，与 Rust 仿真运行时、CLI、场景和发行工具一起维护在本仓库。[qemu-dm-mc02](https://github.com/lym12321/qemu-dm-mc02/tree/main) 的 `main` 分支提供独立的 QEMU 引擎，由子模块和 `qemu.lock` 固定版本。
 
 ## 打开软件
 

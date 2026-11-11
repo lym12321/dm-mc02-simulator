@@ -1121,7 +1121,7 @@ git submodule update --init --depth 1 qemu/upstream
 git clone git@github.com:lym12321/dm-mc02-simulator.git
 ```
 
-本仓库维护完整软件；独立 `qemu-dm-mc02` 仓库的 `dm-mc02/v8.2.2` 分支维护 QEMU fork，子模块固定到一个确切提交。`qemu.lock` 记录上游 v8.2.2 身份、fork 基线和 fork 提交；子模块 gitlink 与 `fork_commit` 必须一致。不要使用 `git submodule update --remote` 替代锁定版本。
+本仓库维护完整软件；独立 `qemu-dm-mc02` 仓库的 `main` 分支维护 QEMU fork，子模块固定到一个确切提交。`qemu.lock` 记录上游 v8.2.2 身份、fork 基线和 fork 提交；子模块 gitlink 与 `fork_commit` 必须一致。引擎版本由标签和锁定提交区分，不按上游版本保留长期分支。不要使用 `git submodule update --remote` 替代锁定版本。
 
 首次构建不需要递归获取 ROM 子模块。**GitHub 的 main 源码 ZIP 不包含 QEMU 子模块源码，不能直接构建**；请使用 Git clone 并初始化子模块。通过本文快速命令获得的浅子模块足以构建和运行，源码打包时需要的完整历史见[源码包章节](#update-and-source-package)。
 
@@ -2462,7 +2462,7 @@ python3 tools/dm_mc02_source_package.py restore \
 默认创建要求 QEMU fork 源码干净。若子模块是浅克隆，创建包前先补齐 fork 历史：
 
 ```bash
-git -C qemu/upstream fetch --unshallow origin dm-mc02/v8.2.2
+git -C qemu/upstream fetch --unshallow origin main
 ```
 
 源码包不含 `.git`、ROM 子模块工作树、构建二进制或固件；ELF 仅按哈希识别。restore 的目标目录必须不存在，源码落在其 `project/` 子目录。`verify` 证明包内容与 manifest 一致，不代表已独立构建或测试；完整验收要在恢复环境重新配置、构建并执行测试门。

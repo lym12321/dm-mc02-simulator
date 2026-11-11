@@ -18,7 +18,9 @@ QEMU 的 `cosim/` 是 wire/payload codec 的唯一源码。Simulator 的 Rust �
 
 ## 更新引擎
 
-1. 在 QEMU 仓库修改并验证原生实现，提交后推送到 `dm-mc02/v8.2.2` 或后续引擎分支。
+QEMU 仓库只保留 `main` 作为长期维护分支，版本由标签和 `qemu.lock` 中的上游身份、固定提交区分。开发时可以使用临时分支，合入后删除。
+
+1. 在 QEMU 仓库修改并验证原生实现，提交后推送到 `main`。
 2. 在 Simulator 的 `qemu/upstream` 检出该提交，更新 `qemu.lock` 的 `fork_commit`，与子模块 gitlink 一起提交。
 3. 构建 Simulator，验证受影响的 CLI、桌面或场景，再生成完整软件包。
 
@@ -28,4 +30,11 @@ QEMU 的 `cosim/` 是 wire/payload codec 的唯一源码。Simulator 的 Rust �
 
 Simulator 继承原 `refactor/composable-platform` 的历史，桌面源码从本地 Tauri Lab 导入；Windows 修复随各自实现迁入两个仓库。旧平台 checkout 和独立 Lab checkout 保留作为恢复来源。
 
-原远端的 `main`、`refactor/composable-platform` 和真正的 QEMU 分支曾混在同一仓库。拆分沿用现有 QEMU 分支作为引擎主线，保留原分支历史；远端默认分支调整和旧分支归档属于后续发布操作。
+QEMU 的默认分支 `main` 现在只维护独立引擎，原 `dm-mc02/v8.2.2` 分支名已停用。旧平台的 `main` 和 `refactor/composable-platform` 历史已完整继承到 Simulator，并在 QEMU 仓库保留归档标签：
+
+| 原平台分支 | 归档标签 | 原分支提交 |
+| --- | --- | --- |
+| `main` | `archive/platform-main-2026-11-12` | `27f46d94c2aa13dbe1df71ee53f0a77b1c15dd9e` |
+| `refactor/composable-platform` | `archive/composable-platform-2026-11-12` | `97bf0c7f44c6fdfe6a0810ab724e8455de63e7c4` |
+
+Simulator 的 `.gitmodules` 和 `qemu.lock` 使用 `main` 作为引擎分支名，实际源码仍由子模块 gitlink 和 `fork_commit` 固定。
