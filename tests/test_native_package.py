@@ -16,10 +16,11 @@ native_package = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(native_package)
 
 
-@pytest.mark.parametrize("suffix, windows_lab, linux_full", [
-    ("", False, False), (".exe", False, False), (".exe", True, False), ("", False, True)])
+@pytest.mark.parametrize("suffix, windows_lab, linux_full, desktop", [
+    ("", False, False, False), (".exe", False, False, False),
+    (".exe", True, False, False), ("", False, True, False), (".exe", True, False, True)])
 def test_package_keeps_launcher_and_backend_separate(
-        monkeypatch, tmp_path, suffix, windows_lab, linux_full):
+        monkeypatch, tmp_path, suffix, windows_lab, linux_full, desktop):
     root = tmp_path / "checkout"
     native = root / "qemu/upstream"
     native.mkdir(parents=True)
@@ -31,7 +32,7 @@ def test_package_keeps_launcher_and_backend_separate(
     notice = root / "crates/sim-host/src/native_process/LICENSE-process-wrap.txt"
     notice.parent.mkdir(parents=True)
     notice.write_text("fixed process-wrap MIT notice")
-    material = root / "third_party/material/mdui"
+    material = root / "apps/lab/src/vendor/licenses/mdui"
     material.mkdir(parents=True)
     material_identity = {"name": "mdui", "version": "2.1.4",
                          "upstream": "https://github.com/zdhxiong/mdui",
@@ -39,10 +40,21 @@ def test_package_keeps_launcher_and_backend_separate(
     (material / "PROVENANCE.json").write_text(json.dumps(material_identity))
     for name in ("LICENSE", "THIRD-PARTY-NOTICES.txt"):
         (material / name).write_text("retained upstream " + name)
+    terminal = root / "apps/lab/src/vendor/licenses/xterm"
+    terminal.mkdir(parents=True)
+    (terminal / "PROVENANCE.json").write_text(json.dumps({"upstream": "xterm", "packages": []}))
+    for name in ("LICENSE", "LICENSE-addon-fit"):
+        (terminal / name).write_text("retained terminal " + name)
+    for relative in ("crates/sim-host/src/usbip/LICENSE-usbip", "qemu/upstream/LICENSES/renode-dwc2-MIT.txt"):
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("retained codec license")
     qemu = tmp_path / ("qemu-system-arm" + suffix)
     qemu.write_bytes(b"native QEMU bytes")
     sim = tmp_path / ("built-sim" + suffix)
     sim.write_bytes(b"Rust executable")
+    backend = tmp_path / ("built-desktop-backend" + suffix)
+    backend.write_bytes(b"private desktop backend")
     output = tmp_path / "release"
     monkeypatch.setattr(native_package, "ROOT", root)
     monkeypatch.setattr(native_package, "NATIVE", native)
@@ -57,7 +69,8 @@ def test_package_keeps_launcher_and_backend_separate(
     })
 
     native_package.package(qemu, sim, output, tmp_path if suffix else None,
-                           windows_lab=windows_lab, linux_full={"enabled": True} if linux_full else None)
+                           lab=windows_lab, linux_full={"enabled": True} if linux_full else None,
+                           desktop_backend=backend if desktop else None)
 
     assert (output / ("sim" + suffix)).read_bytes() == b"Rust executable"
     assert [(path.name, path.read_bytes()) for path in (output / "bin").iterdir()] == [
@@ -67,16 +80,20 @@ def test_package_keeps_launcher_and_backend_separate(
     assert provenance["qemu"]["file"] == "bin/" + qemu.name
     assert (output / "licenses/LICENSE-process-wrap.txt").read_text() == notice.read_text()
     if windows_lab:
-        assert provenance["rust"]["scope"] == "native Windows interactive/Web Lab and ARM GDB debugging"
-    if windows_lab or linux_full:
+        assert provenance["rust"]["scope"] == "native Windows interactive CLI, USB/IP and ARM GDB debugging"
+    if desktop:
+        assert (output / ("sim-lab-backend" + suffix)).read_bytes() == b"private desktop backend"
+        assert provenance["desktop_backend"]["file"] == "sim-lab-backend" + suffix
         assert provenance["web_ui"] == dict(
             material_identity, licenses="licenses/mdui", provenance="licenses/mdui/PROVENANCE.json",
-            vendored_sources="third_party/material/mdui")
+            vendored_sources="apps/lab/src/vendor")
         for name in ("LICENSE", "THIRD-PARTY-NOTICES.txt", "PROVENANCE.json"):
             assert (output / "licenses/mdui" / name).read_bytes() == (material / name).read_bytes()
     else:
         assert "web_ui" not in provenance
         assert not (output / "licenses/mdui").exists()
+        assert "desktop_backend" not in provenance
+        assert not (output / ("sim-lab-backend" + suffix)).exists()
 
 
 def test_package_rejects_mixed_platform_before_staging(tmp_path):

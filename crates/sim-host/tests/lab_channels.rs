@@ -3,11 +3,11 @@
 use sim_host::{
     can::CanFrame,
     lab::channels::{ChannelData, ChannelEvent},
+    signals::ImuSample,
     transports::fixed84::{self, CanStream},
 };
 use sim_host::{
     lab::channels::{AdcValue, LabChannels},
-    signals::ImuSample,
     step_wire::V1Frame,
     transports::stream::StreamTransport,
 };
@@ -143,11 +143,9 @@ fn v1_adc_requires_opening_explicit_reset_and_real_increasing_timestamps() {
     channels.reset(100).unwrap();
     assert!(channels.send_adc(4, AdcValue::Raw(12345), 100).is_err());
     channels.send_adc(4, AdcValue::Raw(12345), 101).unwrap();
-    assert!(
-        channels
-            .send_adc(4, AdcValue::Voltage(3_300_001), 102)
-            .is_err()
-    );
+    assert!(channels
+        .send_adc(4, AdcValue::Voltage(3_300_001), 102)
+        .is_err());
     channels
         .send_adc(4, AdcValue::Voltage(1_650_000), 102)
         .unwrap();
@@ -200,17 +198,15 @@ fn imu_and_adc_share_admission_order_and_freeze_after_native_reset() {
     assert!(channels.consume_opening(false).unwrap());
     channels.reset(100).unwrap();
     assert!(channels.send_imu(&sample, 100).is_err());
-    assert!(
-        channels
-            .send_imu(
-                &ImuSample {
-                    gyro_rad_s: [f64::NAN, 0.0, 0.0],
-                    ..sample
-                },
-                101
-            )
-            .is_err()
-    );
+    assert!(channels
+        .send_imu(
+            &ImuSample {
+                gyro_rad_s: [f64::NAN, 0.0, 0.0],
+                ..sample
+            },
+            101
+        )
+        .is_err());
     channels.send_imu(&sample, 101).unwrap();
     assert!(channels.send_adc(4, AdcValue::Raw(12345), 101).is_err());
     channels.send_adc(4, AdcValue::Raw(12345), 102).unwrap();

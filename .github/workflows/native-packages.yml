@@ -171,7 +171,7 @@ jobs:
       - name: Install independent native Windows acceptance tools
         shell: pwsh
         run: |
-          python -m pip install aiohttp==3.12.15 psutil==7.0.0
+          python -m pip install psutil==7.0.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $archive = "$env:RUNNER_TEMP/arm-tools.zip"
           Invoke-WebRequest 'https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v14.2.1-1.1/xpack-arm-none-eabi-gcc-14.2.1-1.1-win32-x64.zip' -OutFile $archive
@@ -223,7 +223,7 @@ jobs:
             --disable-sdl --disable-gtk --disable-plugins --enable-fdt=internal \
             --enable-download -Dbuildtype=release -Dqom_cast_debug=false
           ninja qemu-system-arm.exe
-      - name: Verify the native Windows process boundary and build complete Lab
+      - name: Verify the native Windows process lifecycle and build interactive CLI
         shell: pwsh
         env:
           # Keep the launcher independent of a separate Visual C++ runtime.
@@ -264,7 +264,7 @@ jobs:
             --firmware "$root/dist/dm-mc02-windows-x86_64/example.elf" `
             --report "$root/dist/dm-mc02-windows-x86_64/smoke.json"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Verify native Windows interactive Lab, Web and real ARM GDB
+      - name: Verify native Windows interactive CLI and real ARM GDB
         shell: pwsh
         run: |
           $python = (Get-Command python).Source
@@ -296,4 +296,4 @@ jobs:
           retention-days: 3
       - name: Record verification boundary
         shell: pwsh
-        run: Add-Content $env:GITHUB_STEP_SUMMARY 'Windows x86_64 native Rust Lab — interactive UART/CAN/ADC, board state/key/GPIO/vin, pause/continue, Web upload/controller/session lifecycle, real ARM GDB break/continue/step/reset/register/memory and bounded cleanup passed without Python or MSYS2 in application PATH. QEMU/DLLs are stored once beside the executable. Linux-only plant/ROS2/SocketCAN capabilities remain separate.'
+        run: Add-Content $env:GITHUB_STEP_SUMMARY 'Windows x86_64 native Rust CLI — interactive UART/CAN/ADC, board state/key/GPIO/vin, pause/continue, rejected GUI commands, real ARM GDB break/continue/step/reset/register/memory and bounded cleanup passed without Python or MSYS2 in application PATH. QEMU/DLLs are stored once beside the executable. Linux-only plant/ROS2/SocketCAN capabilities remain separate.'

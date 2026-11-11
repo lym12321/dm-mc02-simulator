@@ -3,6 +3,8 @@
 /build/
 /dist/
 /target/
+**/target/
+**/node_modules/
 /.pytest_cache/
 /.mypy_cache/
 /.coverage
@@ -25,14 +27,7 @@
 *.elf
 *.o
 
-# Internal development records and local validation output are not published.
-*.md
-!/README.md
-!/docs/USAGE.md
-!/examples/can-motor/README.md
-!/LICENSE*.md
-!/COPYING*.md
-!/third_party/**/*.md
+# Local validation output
 /docs/history/
 /reports/
 /result

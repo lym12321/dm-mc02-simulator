@@ -10,6 +10,7 @@ pub mod project;
 mod runtime;
 #[cfg(feature = "lab-session")]
 pub mod session;
-#[cfg(feature = "web")]
+#[cfg(feature = "desktop-backend")]
+#[doc(hidden)]
 pub mod web;
 pub use runtime::*;

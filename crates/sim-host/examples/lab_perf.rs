@@ -7,15 +7,15 @@ mod cli_support;
 mod host_cpu;
 use clap::Parser;
 use object::{Object, ObjectSymbol};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sim_host::{
-    lab::{ConnectedLab, ImuMode, LabOptions, channels::ChannelData, with_lab},
+    lab::{channels::ChannelData, with_lab, ConnectedLab, ImuMode, LabOptions},
     qmp::commands,
 };
 use std::{
     collections::BTreeMap,
     fs,
-    io::Read,
+    io::{Read, Write},
     path::PathBuf,
     sync::Arc,
     time::{Duration, Instant},
@@ -46,6 +46,9 @@ struct Args {
     /// Trace native SysTick expiry/IRQ entry for the final two seconds.
     #[arg(long, requires = "host_profile")]
     irq_trace: bool,
+    /// Save the bounded native IRQ trace after QEMU has stopped.
+    #[arg(long, requires = "irq_trace")]
+    irq_trace_output: Option<PathBuf>,
 }
 
 fn invalid(message: impl Into<String>) -> sim_core::Failure {
@@ -75,6 +78,16 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if args.irq_trace && args.seconds < 3 {
         return Err("--irq-trace needs --seconds >= 3".into());
     }
+    let mut trace_output = args
+        .irq_trace_output
+        .as_ref()
+        .map(|path| {
+            fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(path)
+        })
+        .transpose()?;
     let mut bytes = Vec::new();
     fs::File::open(&args.firmware)?
         .take(64 * 1024 * 1024 + 1)
@@ -295,6 +308,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if trace.len() > 64 * 1024 * 1024 {
             return Err(std::io::Error::other("IRQ trace exceeds 64 MiB"));
         }
+        if let Some(output) = &mut trace_output {
+            output.write_all(&trace)?;
+        }
         let text = std::str::from_utf8(&trace).map_err(std::io::Error::other)?;
         let (mut expiries, mut entries, mut pending_run, mut max_run) = (0u64, 0u64, 0u64, 0u64);
         for line in text.lines() {
@@ -334,6 +350,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(Some(summary)) => report["irq_trace"] = summary.clone(),
         Err(error) => report["irq_trace_error"] = json!(error.to_string()),
         _ => (),
+    }
+    if let Some(path) = &args.irq_trace_output {
+        report["irq_trace_output"] = json!(path);
     }
     if let Err(error) = &trace_cleanup {
         report["trace_cleanup_error"] = json!(error.to_string());

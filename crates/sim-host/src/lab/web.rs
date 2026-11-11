@@ -1,23 +1,27 @@
 //! Loopback HTTP/WebSocket adapter; the session thread owns native execution.
 use super::session::{LabSession, SessionError, SessionOptions};
 use axum::{
-    Json, Router,
+    body::Bytes,
     extract::{
-        DefaultBodyLimit, Multipart, Path, Request, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
+        DefaultBodyLimit, Multipart, Path, Request, State,
     },
-    http::{HeaderValue, StatusCode, header},
+    http::{header, HeaderValue, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post},
+    Json, Router,
 };
-use futures::{FutureExt, SinkExt, StreamExt, stream::FuturesUnordered};
-use serde_json::{Map, Value, json};
+use futures::{stream::FuturesUnordered, FutureExt, SinkExt, StreamExt};
+use serde_json::{json, Map, Value};
 use sim_core::Error;
 use std::{
+    collections::BTreeMap,
+    io::{self, BufRead, Write},
+    path::Path as FilePath,
     sync::{
-        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
     },
     time::{Duration, Instant},
 };
@@ -26,6 +30,63 @@ use uuid::Uuid;
 
 const UPLOAD_LIMIT: usize = 64 * 1024 * 1024;
 const SEND_TIMEOUT: Duration = Duration::from_secs(2);
+pub const PROTOCOL: &str = "dm-mc02-lab/v1";
+
+// Load only this fixed allowlist before readiness. HTTP requests never read disk.
+const ASSET_FILES: &[(&str, &str)] = &[
+    ("index.html", "text/html; charset=utf-8"),
+    ("app.js", "text/javascript"),
+    ("uart-console.js", "text/javascript"),
+    ("style.css", "text/css"),
+    ("vendor/mdui.js", "text/javascript"),
+    ("vendor/mdui.css", "text/css"),
+    ("vendor/xterm.js", "text/javascript"),
+    ("vendor/xterm.css", "text/css"),
+    ("vendor/addon-fit.js", "text/javascript"),
+];
+
+struct Assets(BTreeMap<&'static str, (&'static str, Bytes)>);
+impl Assets {
+    fn from_directory(directory: &FilePath) -> std::result::Result<Self, SessionError> {
+        let root = directory.canonicalize().map_err(|error| {
+            failed(Error::Admission(format!(
+                "Lab assets directory {}: {error}",
+                directory.display()
+            )))
+        })?;
+        let mut assets = BTreeMap::new();
+        for &(name, mime) in ASSET_FILES {
+            let requested = root.join(name);
+            let path = requested.canonicalize().map_err(|error| {
+                failed(Error::Admission(format!(
+                    "Lab asset {}: {error}",
+                    requested.display()
+                )))
+            })?;
+            if !path.starts_with(&root) || !path.is_file() {
+                return Err(failed(Error::Admission(format!(
+                    "Lab asset must be a file inside {}: {name}",
+                    root.display()
+                ))));
+            }
+            let bytes = std::fs::read(&path).map_err(failed)?;
+            if bytes.is_empty() {
+                return Err(failed(Error::Admission(format!(
+                    "Lab asset is empty: {name}"
+                ))));
+            }
+            assets.insert(name, (mime, Bytes::from(bytes)));
+        }
+        Ok(Self(assets))
+    }
+
+    fn response(&self, name: &str) -> Response {
+        match self.0.get(name) {
+            Some((mime, bytes)) => ([(header::CONTENT_TYPE, *mime)], bytes.clone()).into_response(),
+            None => StatusCode::NOT_FOUND.into_response(),
+        }
+    }
+}
 
 struct HttpError(StatusCode, String);
 impl IntoResponse for HttpError {
@@ -53,6 +114,7 @@ struct Resources {
 }
 struct WebState {
     session: Arc<LabSession>,
+    assets: Assets,
     resources: Mutex<Resources>,
     upload_lock: tokio::sync::Mutex<()>,
     cancelled: Arc<AtomicBool>,
@@ -109,6 +171,13 @@ async fn local_origin(request: Request, next: Next) -> Response {
 async fn state(State(state): State<Arc<WebState>>) -> Json<Value> {
     Json(state.session.state())
 }
+async fn info() -> Json<Value> {
+    Json(json!({
+        "protocol": PROTOCOL,
+        "backend_version": env!("CARGO_PKG_VERSION"),
+        "capabilities": ["project", "firmware-upload", "ide-export", "websocket-controller", "external-assets", "stdin-shutdown"]
+    }))
+}
 async fn project(State(state): State<Arc<WebState>>) -> Json<Value> {
     Json(state.session.project_info())
 }
@@ -124,49 +193,11 @@ async fn ide(
 ) -> std::result::Result<Json<Value>, HttpError> {
     state.session.ide_config(value).map(Json).map_err(bad)
 }
-async fn index() -> impl IntoResponse {
-    (
-        [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
-        include_bytes!("../../../../sim/lab/static/index.html").as_slice(),
-    )
+async fn index(State(state): State<Arc<WebState>>) -> Response {
+    state.assets.response("index.html")
 }
-async fn asset(Path(name): Path<String>) -> Response {
-    let (content_type, bytes): (&str, &[u8]) = match name.as_str() {
-        "app.js" => (
-            "text/javascript",
-            include_bytes!("../../../../sim/lab/static/app.js"),
-        ),
-        "uart-console.js" => (
-            "text/javascript",
-            include_bytes!("../../../../sim/lab/static/uart-console.js"),
-        ),
-        "style.css" => (
-            "text/css",
-            include_bytes!("../../../../sim/lab/static/style.css"),
-        ),
-        "vendor/mdui.js" => (
-            "text/javascript",
-            include_bytes!("../../../../third_party/material/mdui/mdui.js"),
-        ),
-        "vendor/mdui.css" => (
-            "text/css",
-            include_bytes!("../../../../third_party/material/mdui/mdui.css"),
-        ),
-        "vendor/xterm.js" => (
-            "text/javascript",
-            include_bytes!("../../../../third_party/xterm/xterm.js"),
-        ),
-        "vendor/xterm.css" => (
-            "text/css",
-            include_bytes!("../../../../third_party/xterm/xterm.css"),
-        ),
-        "vendor/addon-fit.js" => (
-            "text/javascript",
-            include_bytes!("../../../../third_party/xterm/addon-fit.js"),
-        ),
-        _ => return StatusCode::NOT_FOUND.into_response(),
-    };
-    ([(header::CONTENT_TYPE, content_type)], bytes).into_response()
+async fn asset(State(state): State<Arc<WebState>>, Path(name): Path<String>) -> Response {
+    state.assets.response(&name)
 }
 
 async fn upload(
@@ -479,18 +510,51 @@ async fn socket_loop(socket: WebSocket, controller: Controller) {
     let _ = send(&mut sink, Message::Close(None)).await;
 }
 
-/// Own the server and uploaded firmware until session/thread cleanup completes.
-/// Signals only set the shared request; all native cleanup stays with the owner.
-pub fn run_web(
+/// Run the desktop's private transport until its parent closes stdin or sends shutdown.
+/// Uploaded firmware and native execution stay owned until cleanup completes.
+pub fn run_desktop(
+    options: SessionOptions,
+    port: u16,
+    assets_directory: &FilePath,
+    cancelled: Arc<AtomicBool>,
+) -> std::result::Result<(), SessionError> {
+    let assets = Assets::from_directory(assets_directory)?;
+    run_server(options, port, cancelled, assets)
+}
+
+fn monitor_stdin(
+    cancelled: Arc<AtomicBool>,
+) -> io::Result<std::sync::mpsc::Receiver<io::Result<()>>> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    // A plain thread avoids Tokio's non-cancellable blocking stdin task, which
+    // otherwise prevents the runtime from exiting after Ctrl-C with stdin open.
+    std::thread::Builder::new()
+        .name("lab-parent-stdin".into())
+        .spawn(move || {
+            let mut input = io::stdin().lock();
+            let mut bytes = Vec::new();
+            let result = loop {
+                bytes.clear();
+                match input.read_until(b'\n', &mut bytes) {
+                    Ok(0) => break Ok(()),
+                    Ok(_) if bytes == b"shutdown\n" || bytes == b"shutdown\r\n" => break Ok(()),
+                    Ok(_) => (),
+                    Err(error) if error.kind() == io::ErrorKind::Interrupted => (),
+                    Err(error) => break Err(error),
+                }
+            };
+            let _ = sender.send(result);
+            cancelled.store(true, Ordering::Relaxed);
+        })?;
+    Ok(receiver)
+}
+
+fn run_server(
     options: SessionOptions,
     port: u16,
     cancelled: Arc<AtomicBool>,
+    assets: Assets,
 ) -> std::result::Result<(), SessionError> {
-    if port == 0 {
-        return Err(failed(Error::Admission(
-            "HTTP port must be in1..65535".into(),
-        )));
-    }
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -498,6 +562,7 @@ pub fn run_web(
     let session = Arc::new(LabSession::new(options)?);
     let state = Arc::new(WebState {
         session: session.clone(),
+        assets,
         resources: Mutex::new(Resources::default()),
         upload_lock: tokio::sync::Mutex::new(()),
         cancelled: cancelled.clone(),
@@ -505,6 +570,7 @@ pub fn run_web(
     let router = Router::new()
         .route("/", get(index))
         .route("/{*asset}", get(asset))
+        .route("/api/info", get(info))
         .route("/api/state", get(self::state))
         .route(
             "/api/project",
@@ -525,7 +591,23 @@ pub fn run_web(
         let listener = TcpListener::bind(("127.0.0.1", port))
             .await
             .map_err(failed)?;
-        println!("Web Lab: http://127.0.0.1:{port} (Ctrl-C to stop)");
+        let address = listener.local_addr().map_err(failed)?;
+        let stdin = monitor_stdin(cancelled.clone()).map_err(failed)?;
+        {
+            let mut output = io::stdout().lock();
+            serde_json::to_writer(
+                &mut output,
+                &json!({
+                    "event": "lab-ready",
+                    "protocol": PROTOCOL,
+                    "url": format!("http://{address}"),
+                    "pid": std::process::id(),
+                }),
+            )
+            .map_err(failed)?;
+            writeln!(output).map_err(failed)?;
+            output.flush().map_err(failed)?;
+        }
         axum::serve(listener, router)
             .with_graceful_shutdown(async move {
                 while !cancelled.load(Ordering::Relaxed) {
@@ -534,12 +616,19 @@ pub fn run_web(
             })
             .await
             .map_err(failed)?;
-        Err(failed(Error::Interrupted("Web Lab interrupted".into())))
+        match stdin.try_recv() {
+            Ok(result) => result.map_err(failed),
+            _ => Err(failed(Error::Interrupted(
+                "desktop backend interrupted".into(),
+            ))),
+        }
     });
     let mut primary = execution.err();
     if let Err(error) = session.close() {
         if let Some(primary) = &mut primary {
-            primary.notes.push(format!("Web Lab cleanup: {error}"));
+            primary
+                .notes
+                .push(format!("desktop backend cleanup: {error}"));
             primary.notes.extend(error.notes);
         } else {
             primary = Some(error);

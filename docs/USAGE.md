@@ -1,16 +1,16 @@
-# DM-MC02 QEMU 使用手册
+# DM-MC02 Simulator 使用手册
 
 项目以真实 MCU ELF 为输入，用一个 Rust `Simulation` 组合机器、通信网络、虚拟设备和物理世界。
 当前唯一真实 Machine Profile 是 DM-MC02 / STM32H723；改变 `model` 名称不能增加 MCU 支持。
 产品运行不需要 Python。QEMU、MuJoCo、Gazebo 和 ROS 2 保留原生实现；Python 仅用于构建和独立测试驱动。
-Windows 产品提供固件终端、交互/Web Lab 与原生 ARM GDB 调试；场景、worker 和 SocketCAN 使用 Linux。
+Windows 产品提供固件终端、交互 CLI、桌面 Lab 和原生 ARM GDB 调试；场景、worker 和 SocketCAN 使用 Linux。
 
 下载包命令从解压目录执行；源码命令默认从仓库根目录执行。按需要阅读：
 
 - [安装](#installation)、[原生构建](#build)与[直接运行 ELF](#native-debug)
 - [sim/v1 场景与 Rust API](#simulation)、[互连与精度](#connections)
 - [有限实验与离线复核](#experiments)、[应用预设](#application-presets)
-- [HAL 教学](#hal-teaching)、[交互 Lab](#virtual-lab)与[Web Lab](#web-lab)
+- [HAL 教学](#hal-teaching)、[交互 Lab](#virtual-lab)与[桌面 Lab](#desktop-lab)
 - [原生接口](#native-debug)、[外部 worker](#external-simulation-worker)
 - [验证与性能](#testing-and-performance)、[故障排查](#troubleshooting)
 
@@ -20,18 +20,18 @@ Windows 产品提供固件终端、交互/Web Lab 与原生 ARM GDB 调试；场
 
 ### 下载原生包
 
-目前以本地构建包交付，自动 CI 已暂停；需要时手动运行 [Native packages](https://github.com/lym12321/qemu-dm-mc02/actions/workflows/native-packages.yml)，
+目前以本地构建包交付，自动 CI 已暂停；需要时手动运行 [Native packages](https://github.com/lym12321/dm-mc02-simulator/actions/workflows/native-packages.yml)，
 登录 GitHub 后，在所选运行记录底部的 **Artifacts** 下载。新包保留 3 天。
 
 | Artifact | 平台与范围 |
 | --- | --- |
-| `dm-mc02-windows-x86_64` | Windows x86_64 ZIP，固件终端、交互/Web Lab 与原生 ARM GDB 调试 |
+| `dm-mc02-windows-x86_64` | Windows x86_64 ZIP，固件终端、交互 CLI 与原生 ARM GDB 调试 |
 | `dm-mc02-linux-firmware-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，轻量固件入口 |
-| `dm-mc02-linux-lab-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，固件、交互/Web Lab、USB/IP 与 GDB，使用系统原生库 |
-| `dm-mc02-linux-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，完整场景、Lab/Web、worker、MuJoCo/Gazebo/ROS 2 |
+| `dm-mc02-linux-lab-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，固件、交互 CLI、USB/IP 与 GDB，使用系统原生库 |
+| `dm-mc02-linux-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，完整场景、Lab、worker、MuJoCo/Gazebo/ROS 2 |
 
 Linux Artifact 外层解开后，使用 `tar -xzf` 解开内层 tar.gz；它保留可执行权限和插件符号链接。
-Windows ZIP 直接解压。运行已有 ELF 不需要 ARM 编译器，源码断点调试另装 ARM GDB。
+Windows CLI ZIP 直接解压。桌面便携包由 `tools/Build-Simulator.ps1` 生成，双击 DM-MC02 Simulator.exe。运行已有 ELF 不需要 ARM 编译器，源码断点调试另装 ARM GDB。
 
 Windows PowerShell：
 
@@ -39,7 +39,6 @@ Windows PowerShell：
 .\sim.exe firmware .\example.elf
 .\sim.exe firmware .\example.elf --debug
 .\sim.exe lab interactive --elf .\example.elf
-.\sim.exe lab web --elf .\example.elf
 ```
 
 Linux，在解压目录执行：
@@ -69,10 +68,8 @@ sudo apt-get install -y --no-install-recommends \
 依赖闭包、实际 MuJoCo 转子、Ogre2 相机/LiDAR、ROS context、固件 UART/monitor/reset-paused
 GDB 监听，以及场景/完整 MCAP 重放验收；原生探针未访问外部 SDK 或 Python。
 Linux 构建见 [Actions 42631611379](https://github.com/lym12321/qemu-dm-mc02/actions/runs/42631611379) 的 Linux job。
-Windows Lab 当前为本地交叉构建候选；该轮 Windows 原生进程测试发现清理提前结束，
-修复已通过交叉编译和 Clippy，完整交互/Web/GDB 验收尚待原生复验。
-平台状态以随包 `validation.json` 为准；Windows 原生验收使用 Windows Server 2022，
-覆盖交互/Web 通道、外部 QMP、GDB 断点/继续/单步/复位/寄存器与内存读写及退出清理。
+Windows 桌面已完成原生 ELF 加载、运行/暂停/恢复/停止和关闭清理验收；GDB 与 USB 的独立门按各自记录判断。
+平台状态以随包验收记录为准；CLI 原生门覆盖交互通道、外部 QMP、GDB 和退出清理，桌面门另行覆盖 WebView2 和原生窗口关闭。
 本地运行包与对应源码单独提供；源码包不参与运行，许可证仍保留在运行包中。
 实板校准仍未完成。
 
@@ -81,8 +78,8 @@ Windows Lab 当前为本地交叉构建候选；该轮 Windows 原生进程测�
 工具链由 `rust-toolchain.toml` 固定，Rust 依赖由 Cargo.lock 锁定：
 
 ```bash
-git clone --branch refactor/composable-platform https://github.com/lym12321/qemu-dm-mc02.git
-cd qemu-dm-mc02
+git clone https://github.com/lym12321/dm-mc02-simulator.git
+cd dm-mc02-simulator
 git submodule update --init --depth 1 qemu/upstream
 cargo build --release --locked -p sim-host --features host-runtime
 export PATH="$PWD/target/release:$PATH"
@@ -100,15 +97,16 @@ Cargo 的产品选择如下：
 | features | 用途 |
 | --- | --- |
 | 默认 | 轻量 `sim firmware`，支持 Linux/Windows |
-| `windows-lab` | 原生 Windows 固件终端、完整交互/Web Lab 和调试 |
+| `windows-lab` | 原生 Windows 固件终端、交互命令与调试 |
+| `desktop-backend` | GUI 专属后台进程，配合 Tauri 使用 |
 | `scene` | YAML 准入、Host 场景与唯一 Simulation |
-| `host-runtime` | 场景、trace、machine、Lab/Web、worker、设备、裁判、SocketCAN、显式上位机进程 |
+| `host-runtime` | 场景、trace、machine、Lab、worker、设备、裁判、SocketCAN、显式上位机进程 |
 | `mujoco` | MuJoCo 3.12.0，使用成熟的 mujoco-rs 绑定 |
 | `gazebo` / `gazebo-rendering` | 原生 Gazebo CXX 接口 / Ogre2 相机与 LiDAR |
 | `ros2` | 原生 ROS 2 CXX transport |
 | `linux-runtime` | `host-runtime` 加全部上述原生物理/ROS 功能 |
 
-Windows 原生 Lab 使用 MSVC Rust 工具链。源码含符号链接，Git for Windows 检出前需启用
+Windows 后端可使用本机已验证的 Rust GNU/MinGW 工具链，也保留 MSVC 构建入口。源码含符号链接，Git for Windows 检出前需启用
 Windows 开发者模式并使用 `git clone -c core.symlinks=true`；已有目录先检查
 `third_party/qapi-rs/qmp/schema/qapi/common.json` 是否为有效链接。
 QEMU 的 MSYS2 MINGW64 依赖与 configure 命令见
@@ -116,7 +114,7 @@ QEMU 的 MSYS2 MINGW64 依赖与 configure 命令见
 
 ```powershell
 cargo build --release --locked -p sim-host --features windows-lab
-.\target\release\sim.exe lab web --elf .\app.elf --qemu .\build\qemu\qemu-system-arm.exe
+.\target\release\sim.exe lab interactive --elf .\app.elf --qemu .\build\qemu\qemu-system-arm.exe
 ```
 
 仅固件入口：
@@ -715,7 +713,10 @@ GDB 断点和恒低错误版本的拒绝检查。它验证教学固件与数字�
 
 <a id="virtual-lab"></a>
 
-## 交互与 Web Lab
+## 交互 CLI 与桌面 Lab
+
+桌面主界面、浏览器验收与 Tauri 打包位于同仓 `apps/lab/`。双击 **DM-MC02 Simulator.exe** 使用 GUI；终端使用 `sim lab interactive`。CLI 不包含网页服务或界面资源。
+GUI 专属 `sim-lab-backend` 管理桌面会话，内部协议见 [LAB_PROTOCOL.md](LAB_PROTOCOL.md)，构建见 [开发说明](DEVELOPMENT.md)。
 
 有限自动实验使用同一 Simulation：
 
@@ -774,14 +775,13 @@ sim firmware build/student.elf --debug --qmp /tmp/student-qmp.sock
 
 ### 项目与启动
 
-Web 和交互控制台都可读取 `sim.lab.json`：
+桌面与交互控制台使用同一 `sim.lab.json` 格式：
 
 ```bash
-sim lab web --project sim.lab.json
 sim lab interactive --project sim.lab.json
 ```
 
-Web 首次打开不存在的项目时使用默认配置，在“设置”中点击“保存”才创建文件。网页只能保存启动时指定的
+桌面后台首次打开不存在的项目时使用默认配置，在“设置”中点击“保存”才创建文件。界面只能保存后台启动时指定的
 项目路径；未指定项目时，“完成”只保留本页设置。“设置”中的本地 ELF 路径直接指向编译产物；
 每次“重载”先读取并检查当前 ELF，成功后清理旧进程并启动新固件；文件缺失或尚未写完整时保留当前实验。
 修改设置在下次启动或重载生效；清理失败时不启动替代进程。
@@ -871,7 +871,7 @@ Windows PowerShell 使用同一组命令；原生 GDB 调试从暂停启动：
 在另一终端用 ARM GDB 连接 `127.0.0.1:1234`，加载相同 ELF 后可设置断点、继续、单步、
 读写寄存器/内存，或用 `monitor system_reset` 复位。`--qmp` 另开 QEMU 原生 Unix socket，
 Windows 使用较短的新绝对路径；该选项的既有 100 字节路径上限也适用于 Windows。
-外部调试器退出后，Lab 会话继续由原终端或 Web 管理；总期限包含调试停留时间。
+外部调试器退出后，Lab 会话继续由原终端或桌面管理；总期限包含调试停留时间。
 
 Lab smoke 同时验证实际 GDB attach/detach 与第二 QMP monitor；需要 `arm-none-eabi-gdb`
 或 `gdb-multiarch`，可用 `GDB_ARM` 覆盖。它验证数字固件消费者，不代表实板准确度。
@@ -881,7 +881,7 @@ Lab smoke 同时验证实际 GDB attach/detach 与第二 QMP monitor；需要 `a
 启用 GDB，并在设置中选择“等待 GDB”，或从终端运行：
 
 ```bash
-sim lab web --project sim.lab.json --startup wait-gdb --gdb-port 1234
+sim lab interactive --project sim.lab.json --gdb-port 1234 --paused
 sim lab ide --project sim.lab.json --gdb-port 1234 --format vscode > launch.json
 sim lab ide --project sim.lab.json --gdb-port 1234 --format gdb > lab.gdb
 ```
@@ -891,45 +891,33 @@ CLion 新建 **Remote Debug**，选择 ARM GDB、相同本地 ELF，目标为 `1
 `--format clion` 输出对应字段。普通 GDB 可执行 `arm-none-eabi-gdb -x lab.gdb`。
 网页“设置 → 调试与 USB”中选择 IDE 配置后点击“导出”。QEMU 服务由 Lab 管理，IDE 只附着调试。
 
-<a id="web-lab"></a>
+<a id="desktop-lab"></a>
 
-## Web Lab
+## 桌面 Lab
 
-构建项目 QEMU 后，在同一运行环境中启动本地网页实验台：
+双击 **DM-MC02 Simulator.exe**，点击“打开 ELF”选择固件，再点击“启动”。
 
-```bash
-sim lab web
-sim lab web --project sim.lab.json --elf build/student.elf
-sim lab web --watch --elf build/student.elf
-sim lab web --project sim.lab.json --startup user --usbip
-```
-
-打开 `http://127.0.0.1:8765`，点击“打开 ELF”选择固件，再点击“启动”。
 顶部主按钮随状态切换为“暂停”或“继续”；“重载”检查新 ELF、完成旧进程清理后应用当前设置。
 点击后立即显示操作状态和进度条，启动或重载期间可点击“停止”取消。
 选择 ELF 后仍有上传过程；此时可点“加载后启动”，文件加载成功后启动一次。“停止”、上传失败或断线会取消这次启动。
 “运行中”表示仿真器已经运行；trobot 自身的静止校准仍需完成，其状态以固件输出为准。
 上传文件最多 64 MiB，保留到替换或服务关闭。文件可读不表示它适合本板或应用已经就绪。
 
-`--watch` 或“设置 → ELF 更新后自动重载”监视本地 ELF；也可在项目 JSON 中保存 `"watch_elf": true`，
-用 `--no-watch` 临时关闭。内容稳定至少 500 ms 且 ELF 完整可解析后，先清理旧进程，再加载新 ELF。
+“设置 → ELF 更新后自动重载”监视本地 ELF；也可在项目 JSON 中保存 `"watch_elf": true`，
+内容稳定至少 500 ms 且 ELF 完整可解析后，先清理旧进程，再加载新 ELF。
 缺失、半写入或超过 64 MiB 的文件只显示错误，当前固件继续运行；相同内容不会触发重载。
 这是从复位重新启动固件，RAM 会重置。
 暂停中的实验重载后仍暂停；运行中的实验沿用启动方式。原 GDB 连接会断开，需要重新附着。
 停止实验也停止监视。路径属于运行 Lab 的电脑；上传只保留文件副本，无法监视原始编译产物。
-此选项仅用于 Web Lab。
+此选项用于桌面 Lab。
 
 主界面为全宽 UART/CAN 控制台，各自通过一个端口下拉框切换。USER 支持鼠标按住和键盘操作。
 “引脚与外设”中设置 GPIO、ADC、电源和 USB；底栏显示运行状态、虚拟时间、LED 和 VIN。
 “事件”中查看操作记录和原始快照。启动方式在“设置”中选择，调试、USB/IP、期限和通道配置按需展开。
 当前未随包提供实物板图或精细 3D 模型。
 
-同一服务只允许一个控制页面。关闭页面后实验继续运行，重新打开接回原会话，
-该页面手动按住的 USER 会在断开时释放；自动 USER 启动保持继续由运行时管理。
-未收到结果的输入不会自动重发。
-默认每次实验的 host 总期限为一小时，包含启动和暂停；`--timeout` 可调整，
-`--startup-timeout` 默认 10 秒。`Ctrl-C` 或 TERM 关闭服务并清理实验。
-`--port` 改变本地 HTTP 端口；服务仅绑定回环地址。
+桌面拥有一个后台会话。关闭原生窗口会清理实验、后台和所属 QEMU；重新打开软件创建新会话。未收到结果的输入不会自动重发。
+默认实验 host 总期限为一小时，包含启动和暂停，启动期限为 10 秒，可在设置中调整。
 
 UART 各端口持续采集，默认“终端”使用离线 xterm.js 渲染 UTF-8、ANSI 颜色、清屏、光标移动、退格和回车覆盖。
 切换端口或 HEX 保留各端口的终端状态；HEX 查看原始字节，包括控制序列、NUL 和非 UTF-8 数据。
@@ -955,13 +943,8 @@ UART 时间是轮询样本，CAN 保留 wire 时间；页面刷新不驱动仿�
 
 ### 将固件 USB 连接到本机
 
-使用带 Lab 的新运行包并启用 USB/IP：
-
-```powershell
-.\sim.exe lab web --elf .\trobot.elf --usbip
-```
-
-Linux 使用 `./sim lab web --elf ./trobot.elf --usbip`。启动固件后，在“引脚与外设 → USB”
+桌面在“设置 → 调试与 USB”启用 USB/IP，或在 CLI 中使用 `sim lab interactive --elf trobot.elf --usbip`。
+启动固件后，在“引脚与外设 → USB”
 等待状态从“枚举中”变为“可连接”，再点击“连接本机”，系统即可枚举固件提供的设备。trobot 的
 `0483:5741` 包含 CDC 串口和 WinUSB 接口，串口工具及现有 trobot 主机工具可连接它。
 描述符、BOS、Microsoft OS 2.0 描述符和数据来自正在运行的固件。
@@ -970,7 +953,7 @@ Windows 先安装官方签名的 [usbip-win2 v.0.9.8.1 x64](https://github.com/v
 安装驱动需要管理员权限。安装包 SHA256 为
 `38cad6d4432b52d5bb9409d9ad03b72fdffc4ada4cd3a48fbeca1a2752a8518a`。
 安装完成后重新打开终端，确保 `usbip.exe` 在 PATH；Lab 的连接/断开调用该工具。
-当前 Windows 包已交叉构建，真实 Windows 的 COM/WinUSB、Lab/GDB 和清理验收尚未完成。
+Windows 的 COM/WinUSB 连接仍需独立原生验收。
 Linux 已通过真实内核枚举、串口打开/写入及未修改 trobot 主机工具的调试和日志请求。
 普通测试固件没有主动发送 CDC 数据，因此串口读取方向尚未验收。
 
@@ -983,7 +966,7 @@ trobot 若通过开机按键进入 Debug，可用 USER 启动模式；默认按�
 是否进入应用 Debug 仍由固件响应确认：
 
 ```bash
-sim lab web --elf trobot.elf --startup user --usbip
+sim lab interactive --elf trobot.elf --startup user --usbip
 ```
 
 也可保留手动操作：
@@ -1009,30 +992,7 @@ USB/IP 默认仅监听 `127.0.0.1:3240`，可用 `--usbip 127.0.0.1:33240` 改�
 或该设备数据路径的 migration。固件未初始化 USB、主动软断连或停在 GDB 断点时，
 系统枚举/传输会等待或超时；加载成功不代表 USB 或应用已经就绪。
 
-开发验证可安装测试专用 Chromium：
-
-```bash
-.venv/bin/python -m pip install aiohttp==3.14.3 playwright==1.56.0
-.venv/bin/python -m playwright install chromium --only-shell
-cargo test --locked -p sim-host --features host-runtime --test lab_session --test lab_command
-```
-
-真实浏览器门使用已构建的 HAL Debug/Release 和既有裸机通道夹具：
-
-```bash
-mkdir -p build/web-test
-arm-none-eabi-gcc -mcpu=cortex-m7 -mthumb -O2 -Wall -Wextra -Werror \
-  -ffreestanding -fno-builtin -fno-stack-protector -nostdlib -nostartfiles \
-  -Wl,--gc-sections -Wl,--build-id=none -Wl,-T,smoke/dm_mc02_uart_smoke.ld \
-  -o build/web-test/lab.elf smoke/dm_mc02_lab_smoke.c
-.venv/bin/python smoke/dm_mc02_web_smoke.py --sim target/release/sim \
-  --debug-elf build/teaching/Debug/gpio_key.elf \
-  --release-elf build/teaching/Release/gpio_key.elf --lab-elf build/web-test/lab.elf \
-  --output build/web-test/browser-run
-```
-
-当前 Rust Web 已通过这三个实际浏览器案例。输出目录必须是新路径；报告保存原始输入哈希、截图和清理结果。HAL GPIO 与裸机通道测试
-属于不同消费者证据，不代表实板校准或完整业务固件就绪。
+桌面验收和浏览器测试位于 `apps/lab/tests/`，构建与验证命令见 [桌面说明](../apps/lab/docs/DESKTOP.md)。后台会话和命令的 Rust 测试需要 `desktop-backend` feature。
 
 <a id="environment"></a>
 
@@ -1145,18 +1105,18 @@ Rust 由仓库 `rust-toolchain.toml` 固定；完整 Linux 分发包使用 Ubunt
 ## 获取固定原生源码
 
 ```bash
-git clone --branch refactor/composable-platform https://github.com/lym12321/qemu-dm-mc02.git
-cd qemu-dm-mc02
+git clone https://github.com/lym12321/dm-mc02-simulator.git
+cd dm-mc02-simulator
 git submodule update --init --depth 1 qemu/upstream
 ```
 
 也可以使用 SSH 地址：
 
 ```bash
-git clone --branch refactor/composable-platform git@github.com:lym12321/qemu-dm-mc02.git
+git clone git@github.com:lym12321/dm-mc02-simulator.git
 ```
 
-当前用户入口与打包工作流位于 `refactor/composable-platform`；`main` 保存此前版本。同一仓库中的 `dm-mc02/v8.2.2` 分支保存 QEMU fork，外层子模块固定到一个确切提交。`qemu.lock` 记录上游 v8.2.2 身份、fork 基线和 fork 提交；子模块 gitlink 与 `fork_commit` 必须一致。不要使用 `git submodule update --remote` 替代锁定版本。
+本仓库维护完整软件；独立 `qemu-dm-mc02` 仓库的 `dm-mc02/v8.2.2` 分支维护 QEMU fork，子模块固定到一个确切提交。`qemu.lock` 记录上游 v8.2.2 身份、fork 基线和 fork 提交；子模块 gitlink 与 `fork_commit` 必须一致。不要使用 `git submodule update --remote` 替代锁定版本。
 
 首次构建不需要递归获取 ROM 子模块。**GitHub 的 main 源码 ZIP 不包含 QEMU 子模块源码，不能直接构建**；请使用 Git clone 并初始化子模块。通过本文快速命令获得的浅子模块足以构建和运行，源码打包时需要的完整历史见[源码包章节](#update-and-source-package)。
 
@@ -2050,7 +2010,7 @@ pytest 的 optional skip 不是该层 PASS；没有 Actions 运行记录时不�
 
 ### Windows 固件 tick 与主机性能诊断
 
-`lab_perf` 使用与 Web Lab 相同的原生进程、QMP 和通道生命周期，直接读取 ELF 中的
+`lab_perf` 使用与桌面 Lab 相同的原生进程、QMP 和通道生命周期，直接读取 ELF 中的
 32 位 tick 符号，输出 tick、QEMU 虚拟时间、UART 流量及可选的进程/vCPU CPU 时间和 RSS。
 ELF 需保留符号；默认 `xTickCount`、1000 Hz、静止 IMU、全部六路 UART 和三路 CAN。
 固件不同则用 `--tick-symbol`、`--tick-hz` 指定实际值。
@@ -2068,6 +2028,7 @@ if ($LASTEXITCODE -ne 0) { throw "诊断失败，请检查 qemu-host.json 和终
 `--minimal-io` 仅连接 UART1 与同一 IMU/ADC 通道，适合比较闲置端口成本；删去活跃端口会
 改变固件行为，须同时比较启动和流量。`--sync-profile` 启用 QEMU 原生锁统计，
 `--irq-trace` 记录末两秒 SysTick 到期和 IRQ 进入；三者均要求 `--host-profile`。
+加 `--irq-trace-output .\build\irq-new.log` 可在原生进程停止后保存原始 trace；输出路径必须不存在。
 锁统计和 IRQ trace 会增加开销，应分别运行并保留无 trace 的基线。
 
 CPU 累积秒数的差值除以主机时间差，得到占用的逻辑 CPU 数；进程总量包含 vCPU，不能相加。
@@ -2081,8 +2042,66 @@ CPU 累积秒数的差值除以主机时间差，得到占用的逻辑 CPU 数�
 过期帧处理，候选另修复 HUP-only watch 的空 Winsock `select`。
 旧版末轮有一个约 319 ms 的采样区间只推进 233 ticks；其余日志阶段约 0.992385 倍，
 与候选约 0.992315 倍接近。异常必须保留在总结果中；目前不能证明该 socket 修复稳定提速，
-也不能把该区间直接解释为一次连续线程停顿。约 1.132 GB RSS 的归属仍未定位，
-当时 JIT 仅使用约 7.95 MB、无 flush/invalidation。下一步需要 Windows 调度与调用栈证据。
+也不能把该区间直接解释为一次连续线程停顿。当时 JIT 仅使用约 7.95 MB、无 flush/invalidation。
+
+同日本机复测通过 Windows 内存映射和逐页工作集查询，将约 1.132 GB RSS 的主体定位到
+通用默认的 1 GiB TCG JIT 区；约 6 秒后，该区几乎全部驻留，实际生成代码仍约 7.85 MB。
+触发整区驻留的具体执行者尚未确定。Windows 的 DM-MC02 现将默认 `tb-size` 限为
+64 MiB；其他机器及非 Windows 主机沿用原默认。可在直接启动 QEMU 时显式覆盖：
+
+```powershell
+.\build\qemu\qemu-system-arm.exe -machine dm-mc02 -accel tcg,tb-size=128 `
+  -kernel .\tick.elf -nodefaults -display none -monitor stdio -serial none
+```
+
+`tb-size` 单位为 MiB；显式 `tb-size=0` 恢复 QEMU 自选容量。检查默认值和覆盖语义：
+
+```powershell
+.\.venv\Scripts\python.exe .\smoke\windows_tcg_cache.py `
+  --qemu .\build\qemu\qemu-system-arm.exe --report .\build\tcg-cache-check.json
+```
+
+Lab 每轮读取通道前改用现有 `x-query-virtual-execution` 获取时间，读取后继续获取完整
+板卡快照，减少一次完整 GPIO/LED 状态构造与传输；轮询等待和输入处理频率保持原设置。
+
+本机 Windows 11、Core Ultra 5 125H、GNU release 构建，使用原 `tick.elf`、全部端口、
+静止 IMU、无 trace，每轮 12 秒，按下表顺序交替测量。两种 host 使用同一修复后的 QEMU：
+
+| Host | tick 系数 | 峰值 RSS（MiB） | QEMU CPU（逻辑核） |
+| --- | ---: | ---: | ---: |
+| 候选，第 1 轮 | 0.984406 | 120.125 | 1.439 |
+| 原 host，第 1 轮 | 0.975398 | 119.188 | 1.434 |
+| 候选，第 2 轮 | 0.972353 | 119.711 | 1.435 |
+| 原 host，第 2 轮 | 0.960573 | 119.168 | 1.475 |
+| 候选，第 3 轮 | 0.982570 | 119.320 | 1.443 |
+
+QEMU 虚拟时钟均约 1 倍；候选三轮均未发生 TB flush/invalidation。内存占用已明显降低，
+tick 仍有波动，尚未达到接近 1 倍的目标；当前本地诊断以 0.999 为最低 tick 系数。
+本次未运行正式 Release RTF gate。
+
+额外 IRQ trace 的约 2 秒窗口记录到 2042 次 SysTick 到期、1995 次 IRQ 进入，最多连续
+18 次到期后才进入中断。进一步加入时间戳后，长串补发出现在同步 trace 刚启用附近；
+log 后端每条事件都同步写入并刷新，因此不能把该长串直接认定为正常运行时的连续卡顿。
+trace 有额外开销，其结果单独保留，不替代无 trace 复测。
+
+分段探针观察到请求等待约 1–23 微秒、实际等待约 0.99–2.04 毫秒，以及一次约 2.62 毫秒
+的主循环重取 BQL。SysTick 逾期回调会在同一批次持锁补发；NVIC 只有一个 pending 位，
+vCPU 来不及逐次确认时，多个到期事件合并。这解释了虚拟时钟约 1 倍而固件 tick 落后的机制。
+
+原 `tick.elf` 还配置了 1.5 MHz ADC 时钟、每 rank 41 cycles、双 rank 连续转换，DMA 半满
+和全满中断均开启，理论 DMA 中断率约 36,585/s。提高宿主定时精度会同时提高这部分负载。
+100 微秒以内短轮询的实验出现原生 RESET，已撤回。单线程、提高进程优先级及绑定性能核
+均未达到 tick 目标。指令计时能保持 tick/虚拟时间，但本机 `shift=3,align=on,sleep=on`
+只得到约 0.23 倍实际速度，`shift=auto` 出现 RESET，未替换 Lab 的自由运行模式。
+
+本机尝试启动系统 WPR 返回 `0xc5585011`（系统性能分析策略拒绝），没有生成录制会话。
+采集需要系统性能分析策略权限。
+
+DMA 寄存器读取与清标志现减少无关 stream 扫描；原 MMIO/IRQ 和迁移回归通过。
+12 秒交替测量为候选 0.965064、对照 0.961626、候选 0.966791，均未达 0.999。
+随后主机负载变化时，保留的原版也降至 0.68–0.88；这些样本不能与前一组直接比较。
+Windows QMP 4096 字节缓冲候选通过暂停、队列满、OOB 与断连回归，但原固件未显示 tick
+改善，且一轮发生 RESET；该候选已从源码撤回，默认程序已恢复为 DMA 版本。
 
 可在管理员 PowerShell 中用系统 WPR 采集同一运行；WPA 用于检查报告 PID/TID 对应线程的
 调度、CPU 调用栈和等待。采集本身有开销，需保留前面的普通基线：
@@ -2109,7 +2128,7 @@ try {
 | 多板 | `tools/run-simulation-smoke.sh --case dual-board` | 独立机器与时间映射，非全局硬件锁步 |
 | 物理 | Cargo `physics_mujoco` / `physics_simulation` / `physics_gazebo*` | 匹配 native feature 和 SDK；单 solver、共享驱动与完成态 |
 | 固件直连 | 下文 HAL/BSP、Motor、DJI、Chassis、Referee runner | 编译后的 consumer 与清理；不代表实板标定 |
-| 浏览器 | `smoke/dm_mc02_web_smoke.py --sim ...` | 实际 Rust Web + 原生 HAL/裸机三案例 |
+| 桌面传输/浏览器 | `smoke/dm_mc02_desktop_smoke.py --backend ...` | GUI 私有后台 + 原生 HAL/裸机三案例 |
 
 `.github/workflows/host-core.yml` 使用 Rust host 合同、Clippy 和独立 CLI gate，明确报告 Native NOT RUN。
 原生门需 ARM GCC、兼容 QEMU 及对应 SDK，单独记录命令、产物身份、PASS/FAIL/BLOCKED/SKIP。
@@ -2525,7 +2544,7 @@ EXTI 与 GPIO/EXTI component 状态使用 v2；修正前的 v1 pending 布局被
 - UART5 是遥控器 RX 原始输入，不提供 SBUS-A/DR16 编码、反相电平真实性或 TX。
 - MuJoCo/四轮 toy 参数未标定；CAN 故障为主机交付策略，不模拟真实仲裁、bus-off 或电气错误。
 - 固定 shift0 是虚拟指令计时，不是 H723 周期模型；CPU 切点、FIFO 到达和固件应用消费分别验证。
-- Gazebo/MuJoCo共用场景world factory；ROS/MIT worker与自由运行Lab/Web使用各自明确的原生边界，不建立第二个场景时钟。
+- Gazebo/MuJoCo共用场景world factory；ROS/MIT worker与自由运行Lab使用各自明确的原生边界，不建立第二个场景时钟。
 - 不提供完整硅级模型、整机 migration、硬实时保证、分布式仿真、OJ 服务或任意不可信 manifest 的主机沙箱。
 
 | 路径 | 职责 |
@@ -2535,9 +2554,10 @@ EXTI 与 GPIO/EXTI component 状态使用 v2；修正前的 v1 pending 布局被
 | `crates/sim-host/src/machine`, `profile`, `qmp` | 原生进程/QMP Backend、DM-MC02 profile与外设adapter |
 | `crates/sim-host/src/devices`, `physics` | 协议设备、原生world和joint driver |
 | `crates/sim-host/src/apps`, `trace`, `processes` | 预设、实验、记录/重放、可信上位机程序 |
-| `crates/sim-host/src/lab`, `worker` | Rust原生自由运行Lab/Web与co-sim worker |
+| `crates/sim-host/src/lab`, `worker` | Rust原生自由运行Lab与co-sim worker |
 | `sim/physics/gazebo_native`, `crates/sim-host/native/ros2` | 复用的Gazebo C++ owner与ROS CXX transport |
-| `cosim` | 唯一C wire codec与原生协议测试 |
+| `cosim` | 上层 transport/protocol；canonical C codec 位于 `qemu/upstream/cosim` |
+| `apps/lab` | Tauri 桌面与唯一界面源码 |
 | `crates/sim-host/examples`, `examples`, `smoke`, `tests` | 编译示例、自包含场景、真实ELF门与独立测试驱动 |
 | `qemu/upstream`, `qemu.lock` | 固定 fork 与独立的原生器件/板级测试 |
 | `models`, `third_party` | 固定物理/教学来源、许可证与来源声明 |

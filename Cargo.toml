@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/sim-core", "crates/sim-host"]
-exclude = ["third_party/qapi-rs", "third_party/binrw", "third_party/mujoco-rs"]
+exclude = ["third_party/qapi-rs", "third_party/binrw", "third_party/mujoco-rs", "apps/lab/src-tauri"]
 resolver = "2"
 
 [patch.crates-io]
@@ -10,7 +10,7 @@ binrw = { path = "third_party/binrw" }
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.91.1"
-repository = "https://github.com/lym12321/qemu-dm-mc02"
+repository = "https://github.com/lym12321/dm-mc02-simulator"
 
 [profile.release]
 lto = "thin"

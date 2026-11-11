@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""Black-box native Windows Lab, Web and ARM GDB package acceptance.
+"""Black-box native Windows interactive CLI and ARM GDB package acceptance.
 
-Python, aiohttp, psutil and GDB are independent test tools. The product receives
+Python, psutil and GDB are independent test tools. The product receives
 only the Windows system PATH and discovers its adjacent QEMU without overrides.
 The existing bare-metal fixtures supply the UART/CAN/ADC observations.
 """
 
 import argparse
 import ast
-import asyncio
-import base64
 import ctypes
 import json
 import os
@@ -23,7 +21,6 @@ import tempfile
 import threading
 import time
 
-from aiohttp import ClientSession, FormData, WSServerHandshakeError
 import psutil
 
 
@@ -210,11 +207,6 @@ class Application:
         self.no_native()
         assert self.process.wait(timeout=5) == 0
 
-    def interrupt(self):
-        self.process.send_signal(signal.CTRL_BREAK_EVENT if os.name == "nt" else signal.SIGINT)
-        assert self.process.wait(timeout=8) == 130
-        assert not any(alive(item) for item in self.result["native_identities"])
-
     def close(self):
         cleanup = []
         try:
@@ -361,102 +353,6 @@ def interactive_case(args, cwd, env, result):
         result["external_qmp_path_after_cleanup"] = qmp_path.exists()
 
 
-async def web_scenario(args, app, url, result):
-    async with ClientSession() as client:
-        async with asyncio.timeout(TIMEOUT):
-            while True:
-                assert app.process.poll() is None, "Web server exited before HTTP readiness"
-                try:
-                    response = await client.get(url + "/api/state")
-                    break
-                except OSError:
-                    await asyncio.sleep(.02)
-        assert (await response.json())["status"] == "idle" and not app.natives()
-        for path, content in [("/", "text/html"), ("/app.js", "javascript"), ("/style.css", "text/css")]:
-            response = await client.get(url + path)
-            assert response.status == 200 and content in response.headers["Content-Type"]
-            assert await response.read()
-        assert (await client.get(url + "/api/state", headers={"Origin": "https://foreign.example"})).status == 403
-        invalid = FormData()
-        invalid.add_field("other", b"bad", filename="bad.elf")
-        assert (await client.post(url + "/api/firmware", data=invalid)).status == 400
-        firmware = FormData()
-        firmware.add_field("firmware", args.lab_elf.read_bytes(), filename="lab.elf")
-        response = await client.post(url + "/api/firmware", data=firmware)
-        assert response.status == 200, await response.text()
-        uart = bytearray()
-        serial = 0
-        events = []
-
-        async def receive(ws, predicate):
-            async with asyncio.timeout(TIMEOUT):
-                while True:
-                    value = await ws.receive_json()
-                    events.append(value)
-                    assert len(events) <= 4096, "Web fixture event bound exceeded"
-                    if value.get("type") == "uart":
-                        uart.extend(base64.b64decode(value["data_b64"], validate=True))
-                    if predicate(value):
-                        return value
-
-        async def command(ws, action, generation, values=None):
-            nonlocal serial
-            serial += 1
-            identifier = str(serial)
-            await ws.send_json({"id": identifier, "session_id": generation,
-                                "action": action, "args": values or {}})
-            return await receive(ws, lambda value: value.get("type") == "command_result" and value.get("id") == identifier)
-
-        async with client.ws_connect(url + "/api/ws", origin=url) as ws:
-            await receive(ws, lambda value: value.get("type") == "state")
-            try:
-                second = await client.ws_connect(url + "/api/ws", origin=url)
-            except WSServerHandshakeError as error:
-                assert error.status == 409
-            else:
-                await second.close()
-                raise AssertionError("second Web controller admitted")
-            loaded = await command(ws, "load", None)
-            assert loaded["ok"], loaded
-            generation = loaded["session_id"]
-            await receive(ws, lambda value: value.get("type") == "state" and value["status"] == "paused")
-            assert len(app.natives()) == 1
-            assert not (await command(ws, "run", "stale"))["accepted"]
-            refused = await command(ws, "adc", generation, {"channel": 4, "raw": 1})
-            assert not refused["ok"] and "requires running QEMU" in refused["error"]
-            assert (await command(ws, "run", generation))["ok"]
-            if b"LAB_READY\n" not in uart:
-                await receive(ws, lambda _: b"LAB_READY\n" in uart)
-            assert (await command(ws, "key", generation, {"pressed": True}))["ok"]
-            await receive(ws, lambda value: value.get("type") == "state" and value.get("board", {}).get("key", {}).get("pressed"))
-        # Releasing the sole controller releases momentary input, not the session.
-        async with asyncio.timeout(TIMEOUT):
-            while True:
-                state = await (await client.get(url + "/api/state")).json()
-                if not state["board"]["key"]["pressed"]:
-                    break
-                await asyncio.sleep(.02)
-        assert state["session_id"] == generation and state["status"] == "running"
-        async with client.ws_connect(url + "/api/ws", origin=url) as ws:
-            replay = await receive(ws, lambda value: value.get("type") == "uart")
-            assert replay["session_id"] == generation
-            assert (await command(ws, "stop", generation))["ok"]
-            app.no_native()
-            restarted = await command(ws, "restart", generation)
-            assert restarted["ok"] and restarted["session_id"] != generation, restarted
-            assert len(app.natives()) == 1
-            result["web_events"] = events
-            app.interrupt()  # Ctrl-Break cleans a live native owner, not just an idle server.
-
-
-def web_case(args, cwd, env, result):
-    web_port = port()
-    app = Application([str(args.sim), "lab", "web", "--port", str(web_port),
-                       "--startup-timeout", "5", "--timeout", "40"], cwd, env, result)
-    with app:
-        asyncio.run(web_scenario(args, app, f"http://127.0.0.1:{web_port}", result))
-
-
 def lifecycle_case(args, cwd, env, result, unexpected_exit):
     qmp_path = cwd / "failure.qmp"
     command = [str(args.sim), "lab", "interactive", "--elf", str(args.elf),
@@ -511,7 +407,7 @@ def main():
                 paths += [str(system / "System32"), str(system)]
             env["PATH"] = os.pathsep.join(paths)
             report["environment"] = {"cwd": str(cwd), "PATH": env["PATH"]}
-            cases = [("debug", gdb_case), ("interactive", interactive_case), ("web", web_case),
+            cases = [("debug", gdb_case), ("interactive", interactive_case),
                      ("deadline", lambda *values: lifecycle_case(*values, unexpected_exit=False)),
                      ("unexpected_exit", lambda *values: lifecycle_case(*values, unexpected_exit=True))]
             for name, case in cases:
@@ -524,11 +420,8 @@ def main():
         report["notes"] = getattr(error, "__notes__", [])
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    diagnostic = {key: ({field: value for field, value in item.items() if field != "web_events"}
-                        if isinstance(item, dict) else item)
-                  for key, item in report.items()}
-    print(json.dumps(diagnostic, indent=2), flush=True)
-    print(f"Windows Lab package {'passed' if report['passed'] else 'FAILED'}: {args.report}", flush=True)
+    print(json.dumps(report, indent=2), flush=True)
+    print(f"Windows interactive CLI package {'passed' if report['passed'] else 'FAILED'}: {args.report}", flush=True)
     return 0 if report["passed"] else 1
 
 

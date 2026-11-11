@@ -1,8 +1,10 @@
 //! Borrowed transport tests and a real Unix socketpair -> fixed84 endpoint ->
 //! sole CAN queue -> endpoint -> socket consumer. No QEMU CPU or silicon claim.
 
+#[cfg(unix)]
+use sim_host::can::{CanBusOptions, BRS, FD};
 use sim_host::{
-    can::{CanBus, CanBusOptions, CanCallbacks, CanFrame, EndpointId, BRS, FD},
+    can::{CanBus, CanCallbacks, CanFrame, EndpointId},
     endpoints::qemu_can::{QemuCanEndpoint, QemuTimestampMapper},
     transports::{
         fixed84::{CanFrameSink, CanStream},

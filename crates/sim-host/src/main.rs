@@ -7,6 +7,8 @@ mod cli_support;
 mod firmware;
 #[cfg(feature = "lab")]
 mod lab_cli;
+#[cfg(feature = "lab")]
+mod lab_launch;
 #[cfg(feature = "scene")]
 mod scene_cli;
 #[cfg(all(target_os = "linux", feature = "worker"))]

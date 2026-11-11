@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 project(dm_mc02_qemu VERSION 0.1.0 LANGUAGES C)
 
+# Portable engine codecs have one owner in the pinned QEMU checkout.
+set(DM_MC02_QEMU_COSIM "${CMAKE_CURRENT_SOURCE_DIR}/qemu/upstream/cosim")
+if(NOT EXISTS "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c")
+    message(FATAL_ERROR
+        "Missing pinned QEMU codecs. Run: git submodule update --init qemu/upstream")
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB2 REQUIRED IMPORTED_TARGET glib-2.0)
 
@@ -17,68 +24,68 @@ add_custom_target(dm_mc02_qemu_native_source SOURCES
 
 add_executable(dm_mc02_wire_smoke
     tests/wire_smoke.c
-    cosim/dm_mc02_wire.c
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c"
 )
-target_include_directories(dm_mc02_wire_smoke PRIVATE cosim)
+target_include_directories(dm_mc02_wire_smoke PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_mc02_wire_smoke PRIVATE
                         -Wall -Wextra -Wpedantic -Werror)
 
 add_executable(dm_mc02_v2_wire_smoke
     tests/v2_wire_smoke.c
-    cosim/dm_mc02_wire.c
-    cosim/dm_mc02_v2_wire.c
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c"
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_v2_wire.c"
 )
-target_include_directories(dm_mc02_v2_wire_smoke PRIVATE cosim)
+target_include_directories(dm_mc02_v2_wire_smoke PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_mc02_v2_wire_smoke PRIVATE
                         -Wall -Wextra -Wpedantic -Werror)
 
 add_executable(dm_mc02_v2_wire_vectors
     tests/v2_wire_vectors.c
-    cosim/dm_mc02_wire.c
-    cosim/dm_mc02_v2_wire.c
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c"
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_v2_wire.c"
 )
-target_include_directories(dm_mc02_v2_wire_vectors PRIVATE cosim)
+target_include_directories(dm_mc02_v2_wire_vectors PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_mc02_v2_wire_vectors PRIVATE
                         -Wall -Wextra -Wpedantic -Werror)
 
 add_executable(dm_mc02_v2_payload_smoke
     tests/v2_payload_smoke.c
-    cosim/dm_mc02_wire.c
-    cosim/dm_mc02_v2_payload.c
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c"
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_v2_payload.c"
 )
-target_include_directories(dm_mc02_v2_payload_smoke PRIVATE cosim)
+target_include_directories(dm_mc02_v2_payload_smoke PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_mc02_v2_payload_smoke PRIVATE
                         -Wall -Wextra -Wpedantic -Werror)
 
 add_executable(dm_mc02_v2_payload_vectors
     tests/v2_payload_vectors.c
-    cosim/dm_mc02_wire.c
-    cosim/dm_mc02_v2_payload.c
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c"
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_v2_payload.c"
 )
-target_include_directories(dm_mc02_v2_payload_vectors PRIVATE cosim)
+target_include_directories(dm_mc02_v2_payload_vectors PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_mc02_v2_payload_vectors PRIVATE
                         -Wall -Wextra -Wpedantic -Werror)
 
 add_executable(dm_mc02_v2_adc_payload_smoke
     tests/v2_adc_payload_smoke.c
-    cosim/dm_mc02_wire.c
-    cosim/dm_mc02_v2_payload.c
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c"
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_v2_payload.c"
 )
-target_include_directories(dm_mc02_v2_adc_payload_smoke PRIVATE cosim)
+target_include_directories(dm_mc02_v2_adc_payload_smoke PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_mc02_v2_adc_payload_smoke PRIVATE
                         -Wall -Wextra -Wpedantic -Werror)
 
 add_library(dm_mc02_protocol STATIC
-    cosim/dm_mc02_wire.c
+    "${DM_MC02_QEMU_COSIM}/dm_mc02_wire.c"
     cosim/dm_mc02_protocol.c
 )
-target_include_directories(dm_mc02_protocol PUBLIC cosim)
+target_include_directories(dm_mc02_protocol PUBLIC cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_mc02_protocol PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(dm_mc02_transport STATIC
     cosim/dm_mc02_transport.c
 )
-target_include_directories(dm_mc02_transport PUBLIC cosim)
+target_include_directories(dm_mc02_transport PUBLIC cosim "${DM_MC02_QEMU_COSIM}")
 target_link_libraries(dm_mc02_transport PUBLIC dm_mc02_protocol)
 target_compile_options(dm_mc02_transport PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -418,7 +425,7 @@ add_executable(dm_mc02_spi_target_smoke
     qemu/upstream/hw/arm/dm_mc02_bmi088.c
     qemu/upstream/hw/arm/dm_mc02_bmi088_signal.c
     qemu/upstream/hw/arm/dm_mc02_spi_nor.c
-    cosim/dm_nor_flash.c)
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash.c")
 target_include_directories(dm_mc02_spi_target_smoke PRIVATE
                            qemu/upstream
                            qemu/upstream/include
@@ -437,23 +444,24 @@ target_link_options(dm_mc02_spi_target_smoke PRIVATE
 add_executable(dm_spi_nor_flash_smoke
     tests/spi_nor_flash_smoke.c
     qemu/upstream/hw/arm/dm_mc02_spi_nor.c
-    cosim/dm_nor_flash.c)
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash.c")
 target_include_directories(dm_spi_nor_flash_smoke PRIVATE
-                           qemu/upstream/hw/arm cosim)
+                           qemu/upstream
+                           qemu/upstream/hw/arm cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_spi_nor_flash_smoke PRIVATE
                         -Wall -Wextra -Wpedantic -Werror -UNDEBUG)
 
 add_executable(dm_nor_flash_smoke
     tests/nor_flash_smoke.c
-    cosim/dm_nor_flash.c)
-target_include_directories(dm_nor_flash_smoke PRIVATE cosim)
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash.c")
+target_include_directories(dm_nor_flash_smoke PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_nor_flash_smoke PRIVATE
                         -Wall -Wextra -Wpedantic -Werror -UNDEBUG)
 
 add_executable(dm_nor_flash_persistence_smoke
     tests/nor_flash_persistence_smoke.c
-    cosim/dm_nor_flash_persistence.c)
-target_include_directories(dm_nor_flash_persistence_smoke PRIVATE cosim)
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash_persistence.c")
+target_include_directories(dm_nor_flash_persistence_smoke PRIVATE cosim "${DM_MC02_QEMU_COSIM}")
 target_compile_options(dm_nor_flash_persistence_smoke PRIVATE
                         -Wall -Wextra -Wpedantic -Werror -UNDEBUG)
 
@@ -556,8 +564,8 @@ target_compile_options(dm_mc02_dma_endpoint_smoke PRIVATE
 add_executable(dm_mc02_ospi_dma_endpoint_smoke
     tests/ospi_dma_endpoint_smoke.c
     qemu/upstream/hw/arm/dm_mc02_ospi.c
-    cosim/dm_nor_flash.c
-    cosim/dm_nor_flash_persistence.c)
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash.c"
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash_persistence.c")
 target_compile_definitions(dm_mc02_ospi_dma_endpoint_smoke PRIVATE
                             DM_MC02_OSPI_TEST_FIXTURE=1)
 target_include_directories(dm_mc02_ospi_dma_endpoint_smoke PRIVATE
@@ -565,7 +573,7 @@ target_include_directories(dm_mc02_ospi_dma_endpoint_smoke PRIVATE
                            qemu/upstream/include
                            qemu/upstream/hw/arm
                            "${CMAKE_CURRENT_BINARY_DIR}/../qemu"
-                           cosim)
+                           cosim "${DM_MC02_QEMU_COSIM}")
 target_link_libraries(dm_mc02_ospi_dma_endpoint_smoke PRIVATE
                       PkgConfig::GLIB2)
 set_property(TARGET dm_mc02_ospi_dma_endpoint_smoke PROPERTY C_EXTENSIONS ON)
@@ -580,8 +588,8 @@ add_executable(dm_mc02_ospi_dma_integration_smoke
     qemu/upstream/hw/arm/dm_mc02_dma.c
     qemu/upstream/hw/arm/dm_mc02_dma_endpoint.c
     qemu/upstream/hw/arm/dm_mc02_ospi.c
-    cosim/dm_nor_flash.c
-    cosim/dm_nor_flash_persistence.c)
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash.c"
+    "${DM_MC02_QEMU_COSIM}/dm_nor_flash_persistence.c")
 target_compile_definitions(dm_mc02_ospi_dma_integration_smoke PRIVATE
                             DM_MC02_OSPI_TEST_FIXTURE=1)
 target_include_directories(dm_mc02_ospi_dma_integration_smoke PRIVATE
@@ -589,7 +597,7 @@ target_include_directories(dm_mc02_ospi_dma_integration_smoke PRIVATE
                            qemu/upstream/include
                            qemu/upstream/hw/arm
                            "${CMAKE_CURRENT_BINARY_DIR}/../qemu"
-                           cosim)
+                           cosim "${DM_MC02_QEMU_COSIM}")
 target_link_libraries(dm_mc02_ospi_dma_integration_smoke PRIVATE
                       PkgConfig::GLIB2)
 set_property(TARGET dm_mc02_ospi_dma_integration_smoke PROPERTY

@@ -48,8 +48,8 @@ fn main() {
     }
     #[cfg(feature = "cosim-wire")]
     {
-        // The existing portable C codecs remain the canonical wire owner.
-        let source = "../../cosim";
+        // Consume the portable codecs from the pinned QEMU engine.
+        let source = "../../qemu/upstream/cosim";
         for name in [
             "dm_mc02_wire.h",
             "dm_mc02_wire.c",
@@ -58,7 +58,12 @@ fn main() {
             "dm_mc02_v2_payload.h",
             "dm_mc02_v2_payload.c",
         ] {
-            println!("cargo:rerun-if-changed={source}/{name}");
+            let path = format!("{source}/{name}");
+            assert!(
+                std::path::Path::new(&path).is_file(),
+                "Missing pinned QEMU codec {path}; run git submodule update --init qemu/upstream"
+            );
+            println!("cargo:rerun-if-changed={path}");
         }
         cc::Build::new()
             .include(source)

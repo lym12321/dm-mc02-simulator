@@ -1,129 +1,74 @@
-# DM-MC02 QEMU
+# DM-MC02 Simulator
 
-**可组合的嵌入式固件协同仿真工具，当前真实机器为 STM32H723 / DM-MC02。**
+运行 DM-MC02 / STM32H723 固件的桌面仿真软件。打开 ELF，观察 UART、CAN、ADC 和板卡状态，暂停、重载固件，或连接 ARM GDB 调试。
 
-用 `sim firmware app.elf` 运行固件，或用一份 `sim/v1` 场景组合真实 ELF、机器、
-CAN/UART、虚拟设备与原生物理世界。宿主 CLI、运行时和 API 使用 Rust；运行产品不需要 Python。
-QEMU、MuJoCo、Gazebo 与 ROS 2 继续使用各自的原生实现。
-模型用于功能验证，不提供完整硅级、电气时序、整机 migration 或硬实时保证。
+Tauri Lab 是软件的主界面，与 Rust 仿真运行时、CLI、场景和发行工具一起维护在本仓库。[qemu-dm-mc02](https://github.com/lym12321/qemu-dm-mc02/tree/dm-mc02/v8.2.2) 提供独立的 QEMU 引擎，由子模块和 `qemu.lock` 固定版本。
 
-| 入口 | 用途 |
-| --- | --- |
-| [使用手册](docs/USAGE.md) | 安装、场景、实验、Rust API、原生调试与验证 |
-| [真实单板 ELF](examples/minimal-board/) | SysTick、USART1 与按键 GPIO |
-| [UART 外设连线](examples/uart-link/) | 字节流外设与真实固件因果响应 |
-| [CAN 故障实验](examples/can-faults/host-only.yaml) | 无原生依赖的延迟、定向丢帧和恢复 |
-| [共享世界与异构驱动器](examples/shared-world/) | 单一 MuJoCo World、M3508 和独立 joint driver |
-| [HAL 教学](docs/USAGE.md#hal-teaching) | 固定 HAL/CMSIS 的独立工程 |
-| [Web Lab](docs/USAGE.md#web-lab) | `sim lab web` 本地网页实验台 |
-| [USB 连接本机](docs/USAGE.md#usb-host) | `sim lab web --usbip`，固件 CDC/WinUSB 通过 USB/IP 接入本机 |
+## 打开软件
 
-## 下载并运行
+在 Windows 便携包中双击 **DM-MC02 Simulator.exe**，选择 ELF 后启动。暂停、恢复、停止和重载都在主界面中完成；关闭窗口会同时停止所属仿真进程。
 
-目前以本地构建包交付，自动 CI 已暂停。需要 GitHub 构建时，可手动运行
-[Native packages 工作流](https://github.com/lym12321/qemu-dm-mc02/actions/workflows/native-packages.yml)；
-下载需要登录 GitHub，新 Artifacts 保留 3 天。
+保留 EXE 旁的 `runtime/`、`lab/` 和 DLL。运行需要 Windows WebView2；不需要安装 Rust、Node.js、Python 或 MSYS2。发行时同时提供对应源码包，许可证随运行包保留。
 
-| Artifact | 平台与范围 |
-| --- | --- |
-| `dm-mc02-windows-x86_64` | Windows x86_64 ZIP，固件终端、交互/Web Lab 与原生 GDB 调试 |
-| `dm-mc02-linux-firmware-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，轻量固件入口 |
-| `dm-mc02-linux-lab-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，固件、交互/Web Lab、USB/IP 与 GDB，使用系统原生库 |
-| `dm-mc02-linux-x86_64` | Ubuntu 24.04+ x86_64 tar.gz，场景、Lab/Web、worker、MuJoCo/Gazebo/ROS 2 |
+桌面功能见 [桌面说明](apps/lab/docs/DESKTOP.md)，运行时与场景见 [使用手册](docs/USAGE.md)。当前模型用于固件功能验证；Windows 的实时倍率和内存问题仍在分析中。
 
-Linux 下载后解开 Artifact 外层，再用 `tar -xzf` 解开其中的 tar.gz，保留执行权限和插件符号链接。
-轻量 Linux 包需要系统 GLib/zlib；完整包保留宿主 glibc≥2.39、Linux pidfd 与 EGL/OpenGL 驱动边界。
-完整 Linux 运行目录约 351.8 MiB，其中 Rust 入口为 8.64 MiB；另附约 141 MiB 对应源码与许可证。
+## Windows 开发
 
-本地完整包已在干净 Ubuntu 24.04.3 容器、checkout 外和空应用 PATH 下，通过原生依赖、
-MuJoCo/Ogre2/ROS、固件 UART/GDB、场景及完整 MCAP 重放验收。
-Linux 构建见 [Actions 42631611379](https://github.com/lym12321/qemu-dm-mc02/actions/runs/42631611379) 的 Linux job。
-Windows Lab 当前提供交叉构建候选；该轮原生进程测试发现清理提前结束，修复已通过编译检查，
-完整 Windows Lab/GDB 尚待原生复验。下载时核对随包 `validation.json`。
-本地交付将运行包与对应源码分开；运行程序只需运行包，许可证保留在其中。
-
-Windows PowerShell：
+先启用 Windows 开发者模式，再检出源码和固定 QEMU：
 
 ```powershell
-.\sim.exe firmware .\example.elf
-.\sim.exe firmware .\example.elf --debug
-.\sim.exe lab interactive --elf .\example.elf
-.\sim.exe lab web --elf .\example.elf
-```
-
-Linux，在解压目录执行：
-
-```bash
-./sim firmware example.elf
-./sim firmware example.elf --debug
-```
-
-将 `example.elf` 换为自己的 DM-MC02 ELF。默认 UART1 与原生 monitor 共用终端；
-`Ctrl-a c` 切换，`Ctrl-a h` 查看帮助，在 monitor 输入 `quit` 退出。
-`--debug` 从复位暂停并监听 `127.0.0.1:1234`；另装 ARM GDB 后连接：
-
-```bash
-arm-none-eabi-gdb example.elf
-```
-
-```gdb
-target remote 127.0.0.1:1234
-break firmware_main
-continue
-```
-
-QEMU 选择顺序为 `--qemu`、`QEMU_SYSTEM_ARM`、发行目录 `bin/` 中的 QEMU。
-系统 QEMU 不含本项目板卡；GitHub 源码 ZIP 不含子模块，请使用 Git clone。
-其它 UART、machine 属性、QMP 和外部输入见[原生接口](docs/USAGE.md#native-debug)。
-
-## 源码构建与场景
-
-使用固定工具链和 Cargo.lock，在 Linux 或 WSL2 中构建宿主功能：
-
-```bash
-git clone --branch refactor/composable-platform https://github.com/lym12321/qemu-dm-mc02.git
-cd qemu-dm-mc02
+git clone -c core.symlinks=true https://github.com/lym12321/dm-mc02-simulator.git
+cd dm-mc02-simulator
 git submodule update --init --depth 1 qemu/upstream
-cargo build --release --locked -p sim-host --features host-runtime
-export PATH="$PWD/target/release:$PATH"
-sim validate examples/can-faults/host-only.yaml
-sim run examples/can-faults/host-only.yaml --report build/host-only.json
 ```
 
-这个例子只验证 Host CAN 交付，不运行 MCU。真实固件需先按[环境准备](docs/USAGE.md#ubuntu)
-安装构建工具，再构建固定 QEMU 和 ARM ELF：
+本项目已使用 Rust GNU / MinGW 验证。准备 Rust、Node.js、WebView2 和 MSYS2 MINGW64 后，从仓库根目录构建：
+
+```powershell
+. .\tools\Enter-Dev.ps1 -MsysRoot D:\Environment\msys64
+.\tools\Build-Simulator.ps1
+```
+
+构建入口生成可直接打开的便携目录，并打印 EXE 与对应源码包的位置。开发中的未提交源码请显式加 `-Development`。准备好运行包后，修改界面可运行：
+
+```powershell
+npm --prefix apps/lab run dev
+```
+
+GUI 的界面源码位于 `apps/lab/src`，专属后台进程为 `sim-lab-backend`。CLI `sim` 提供终端、调试、场景与自动化命令，不包含网页入口或界面资源。详见 [开发与构建](docs/DEVELOPMENT.md)。
+
+## CLI 与场景
+
+CLI 可独立构建，不需要 Node.js 或 Tauri：
+
+```powershell
+cargo build --release --locked -p sim-host --features windows-lab --bin sim
+.\target\release\sim.exe lab interactive --elf .\app.elf --qemu .\build\qemu\qemu-system-arm.exe
+.\target\release\sim.exe firmware .\app.elf --debug --qemu .\build\qemu\qemu-system-arm.exe
+```
+
+Linux 的场景、worker、MuJoCo/Gazebo/ROS 2 与实验重放沿用已有构建入口：
 
 ```bash
-bash tools/build-qemu.sh
-export QEMU_SYSTEM_ARM="$PWD/build/qemu/qemu-system-arm"
-cmake -S examples/minimal-board -B examples/minimal-board/build -DCMAKE_BUILD_TYPE=Debug
-cmake --build examples/minimal-board/build
-sim run examples/minimal-board/scene.yaml --report build/minimal-board.json
-sim lab web --elf examples/minimal-board/build/firmware.elf
+cargo build --release --locked -p sim-host --features host-runtime --bin sim
+target/release/sim validate examples/can-faults/host-only.yaml
+target/release/sim run examples/can-faults/host-only.yaml --report build/host-only.json
 ```
 
-默认 Cargo 构建只提供轻量 `firmware`；Windows 用 `cargo build --release --locked -p sim-host --features windows-lab`
-构建交互/Web Lab 和调试工具，`host-runtime` 提供 Linux 下不含原生物理 SDK 的宿主功能。
-完整 Linux 构建用 `bash tools/build-linux-sdk.sh`、`bash tools/build-linux-runtime.sh`；
-细分 Cargo features、原生 SDK 与 Rust API 见[安装](docs/USAGE.md#installation)。
-原 Robot/Arena/Scenario schema 与独立执行器已由普通场景替代。
+真实固件另需构建 QEMU；原生物理 SDK 的安装和功能范围见 [使用手册](docs/USAGE.md)。
 
-## 验证与目录
+## 代码归属
 
-```bash
-cargo test --locked --workspace --features sim-host/host-runtime
-cargo clippy --locked --workspace --features sim-host/host-runtime --all-targets --no-deps -- -D warnings
-cargo run --locked -p sim-host --features simulation --example host_can
-```
+| 路径 | 职责 |
+| --- | --- |
+| `apps/lab` | Tauri 桌面、界面、浏览器验收、桌面打包 |
+| `crates/sim-core` | 生命周期、时间和调度合同 |
+| `crates/sim-host` | 仿真运行时、CLI、GUI 专属后台、设备和物理集成 |
+| `cosim` | 上层协议和 transport；wire codec 来自固定 QEMU |
+| `qemu/upstream` | 独立 QEMU 仓库的固定子模块 |
+| `examples`, `firmware`, `sim`, `models` | 示例固件、场景、原生物理集成和资源 |
+| `tools`, `tests`, `smoke` | 软件构建、发行和集成验收 |
 
-Python 仅用于构建和独立测试驱动；其环境安装及原生门见[验证手册](docs/USAGE.md#testing-and-performance)。
-Host gate 不运行 MCU 或物理引擎。历史 Robot 2s 场景在原 10s host 预算下仍 FAIL；
-原生、浏览器及固件消费者的证据分别记录，测试通过不等于实板校准。
+两仓职责和版本协作见 [仓库拆分](docs/REPOSITORIES.md)，GUI 与后台进程接口见 [Lab 协议](docs/LAB_PROTOCOL.md)。
 
-`crates/sim-core` 拥有通用生命周期、时间和调度合同；`crates/sim-host` 提供配置、互连、
-机器/设备/物理 adapter、实验、Lab 和 CLI。`cosim` 保留唯一 C wire codec，
-`sim/physics/gazebo_native` 保留原生 C++ Gazebo owner；`tools`、`smoke`、`tests` 承载构建与测试。
-`qemu/upstream` 是由 `qemu.lock` 固定的 QEMU v8.2.2 fork。
-
-QEMU 许可证见 [COPYING](https://github.com/lym12321/qemu-dm-mc02/blob/dm-mc02/v8.2.2/COPYING)。
-第三方源码与模型保留各自来源、版权和许可证；本仓库不分发外部 `trobot` 固件。
+第三方源码、依赖和模型保留各自来源与许可证；本仓库不分发外部 `trobot` 固件。

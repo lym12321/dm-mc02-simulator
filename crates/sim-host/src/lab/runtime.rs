@@ -8,14 +8,14 @@ use crate::{
     can::CanFrame,
     launch,
     native_process::{NativeProcess, ProcessOptions},
-    qmp::{QmpSession, commands},
+    qmp::{commands, QmpSession, QueryVirtualExecution},
     transports::{fixed84::CanStream, stream::StreamTransport},
 };
 use futures::FutureExt;
 #[cfg(unix)]
-use rustix::event::{PollFd, PollFlags, Timespec, poll};
+use rustix::event::{poll, PollFd, PollFlags, Timespec};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sim_core::{Error, Failure, Result};
 #[cfg(windows)]
 use std::net::TcpStream as NativeStream;
@@ -27,8 +27,8 @@ use std::{
     future::Future,
     path::PathBuf,
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
+        Arc,
     },
     time::{Duration, Instant},
 };
@@ -353,7 +353,10 @@ impl ConnectedLab<'_> {
     }
     /// Snapshot after each channel read supplies its separate native upper bound.
     pub fn pump(&mut self) -> Result<(Value, Vec<ChannelEvent>)> {
-        let before = self.snapshot()?["timestamp_ns"].as_u64().unwrap();
+        // The pre-read bound needs only native time; keep the full board
+        // observation after servicing channels instead of constructing it twice.
+        let before = u64::try_from(self.command(QueryVirtualExecution {})?.current_ns)
+            .map_err(|_| state("QEMU virtual time cannot be negative"))?;
         self.release_startup_user(before)?;
         let events = self
             .channels

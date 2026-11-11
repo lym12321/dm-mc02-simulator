@@ -23,6 +23,9 @@ def check(executable):
             return result
 
         assert "firmware" in run("--help").stdout
+        for removed_command in ("web", "serve"):
+            rejected = run("lab", removed_command, "--help", code=2)
+            assert "unrecognized subcommand" in rejected.stderr, rejected.stderr
         scene = root / "scene.yaml"
         scene.write_text('''schema: sim/v1
 runtime: {duration: 3ms}
@@ -62,7 +65,7 @@ experiment:
             linkage = subprocess.check_output(["ldd", str(binary)], text=True).lower()
             assert "python" not in linkage, linkage
         assert not any(p.suffix in {".py", ".pyc"} for p in root.rglob("*"))
-        print("PASS: standalone CLI, capture/offline replay, missing backend, no Python payload")
+        print("PASS: standalone CLI, capture/offline replay, missing backend, GUI commands rejected, no Python payload")
 
 
 if __name__ == "__main__":

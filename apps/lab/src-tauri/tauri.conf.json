@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DM-MC02 Simulator",
+  "version": "0.1.0",
+  "identifier": "dev.dm-mc02.simulator",
+  "build": { "frontendDist": "launcher" },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [{
+      "label": "main",
+      "title": "DM-MC02 Simulator",
+      "width": 1360,
+      "height": 900,
+      "minWidth": 1080,
+      "minHeight": 720
+    }],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "resources": { "runtime/": "runtime/", "../src/": "lab/" },
+    "icon": ["icons/icon.ico"]
+  }
+}

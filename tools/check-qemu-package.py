@@ -174,6 +174,17 @@ def main():
             if probe.returncode or not any(line.split()[:1] == [b"dm-mc02"]
                                           for line in probe.stdout.splitlines()):
                 raise RuntimeError("packaged QEMU does not expose the dm-mc02 machine")
+            report["removed_gui_commands"] = {}
+            for removed_command in ("web", "serve"):
+                rejected = subprocess.run(
+                    [str(sim), "lab", removed_command, "--help"], cwd=directory,
+                    env=env, capture_output=True, timeout=10)
+                diagnostic = rejected.stderr.decode("utf-8", errors="replace")
+                report["removed_gui_commands"][removed_command] = {
+                    "exit_code": rejected.returncode, "stderr": diagnostic,
+                }
+                if rejected.returncode != 2 or "unrecognized subcommand" not in diagnostic:
+                    raise RuntimeError(f"CLI did not reject removed GUI command at parsing: lab {removed_command}")
             report["console"] = console_case(command, debug=False, cwd=directory, env=env)
             report["debug"] = console_case(command, debug=True, cwd=directory, env=env)
         report["passed"] = report["console"]["passed"] and report["debug"]["passed"]

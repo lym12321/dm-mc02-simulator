@@ -1,7 +1,7 @@
 //! Safe host values over the canonical portable C co-simulation codecs.
 //!
 //! Body codecs own no outer stream framing, session state, retries or clocks.
-//! Native layout is defined by cosim/dm_mc02_{wire,v2_wire,v2_payload}.h.
+//! Native layout is defined by qemu/upstream/cosim/dm_mc02_{wire,v2_wire,v2_payload}.h.
 use crate::{Error, Result};
 
 pub const MAX_PAYLOAD: usize = 512;

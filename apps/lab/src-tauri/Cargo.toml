@@ -1,0 +1,33 @@
+[package]
+name = "dm-mc02-lab"
+version = "0.1.0"
+description = "DM-MC02 Simulator desktop application"
+authors = ["DM-MC02 contributors"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The desktop executable links this library directly. Mobile-style dynamic
+# exports are unnecessary and exceed MinGW's export limit in debug builds.
+name = "dm_mc02_lab_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+embed-resource = "3"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

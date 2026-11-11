@@ -41,27 +41,29 @@ def source_identities(development=False):
         untracked = command("git", "ls-files", "--others", "--exclude-standard", cwd=ROOT)
         if untracked:
             raise ValueError("release source tree contains untracked files; use an explicit development snapshot")
-    subprocess.run(["git", "diff", "--quiet", "--ignore-submodules=all", "HEAD"],
-                   cwd=NATIVE, check=True)
+        subprocess.run(["git", "diff", "--quiet", "--ignore-submodules=all", "HEAD"],
+                       cwd=NATIVE, check=True)
     return root_commit, native_commit
 
 
-def archive_worktree(commit, directory):
+def archive_worktree(commit, directory, *, repository=None, name="dm-mc02-simulator"):
     """Explicit development evidence; never describe uncommitted bytes as HEAD."""
+    repository = ROOT if repository is None else repository
     names = subprocess.check_output(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=ROOT
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=repository
     ).decode().split("\0")
-    prefix = f"dm-mc02-qemu-development-{commit}"
+    prefix = f"{name}-development-{commit}"
     archive = directory / f"{prefix}.tar.gz"
     files = {}
     with tarfile.open(archive, "w:gz", dereference=False) as output:
-        for name in sorted(set(names)):
-            path = ROOT / name
-            if not name or (not path.is_file() and not path.is_symlink()):
+        for filename in sorted(set(names)):
+            path = repository / filename
+            if not filename or (not path.is_file() and not path.is_symlink()):
                 continue
-            output.add(path, arcname=f"{prefix}/{name}", recursive=False)
-            files[name] = {"symlink": str(path.readlink())} if path.is_symlink() else digest(path)
-    manifest = directory / "development-worktree.json"
+            output.add(path, arcname=f"{prefix}/{filename}", recursive=False)
+            files[filename] = {"symlink": str(path.readlink())} if path.is_symlink() else digest(path)
+    manifest_name = "development-worktree.json" if name == "dm-mc02-simulator" else f"{name}-development-worktree.json"
+    manifest = directory / manifest_name
     manifest.write_text(json.dumps({"head": commit, "files": files}, indent=2) + "\n")
     return {"path": f"sources/{archive.name}", "head": commit,
             "uncommitted": True, "sha256": digest(archive),
@@ -174,7 +176,7 @@ def rust_provenance(sim, sources, licenses, features=()):
 
 
 def package(binary, sim, output, dll_directory=None, *, development=False, linux_full=None,
-            lab=False):
+            lab=False, desktop_backend=None):
     binary = binary.resolve(strict=True)
     sim = sim.resolve(strict=True)
     if not binary.is_file():
@@ -184,6 +186,10 @@ def package(binary, sim, output, dll_directory=None, *, development=False, linux
     windows = binary.suffix.lower() == ".exe"
     if windows != (sim.suffix.lower() == ".exe"):
         raise ValueError("sim and QEMU must target the same platform")
+    if desktop_backend is not None:
+        desktop_backend = desktop_backend.resolve(strict=True)
+        if not desktop_backend.is_file() or windows != (desktop_backend.suffix.lower() == ".exe"):
+            raise ValueError("desktop backend and sim must target the same platform")
     if windows and dll_directory is None:
         raise ValueError("Windows QEMU requires --dll-dir for its runtime dependencies")
     if dll_directory is not None:
@@ -199,6 +205,9 @@ def package(binary, sim, output, dll_directory=None, *, development=False, linux
     shutil.copy2(binary, output / "bin" / binary.name)
     launcher = output / ("sim.exe" if windows else "sim")
     shutil.copy2(sim, launcher)
+    if desktop_backend is not None:
+        backend_name = "sim-lab-backend.exe" if windows else "sim-lab-backend"
+        shutil.copy2(desktop_backend, output / backend_name)
     (output / "docs").mkdir()
     shutil.copy2(ROOT / "README.md", output / "README.md")
     shutil.copy2(ROOT / "docs/USAGE.md", output / "docs/USAGE.md")
@@ -228,8 +237,9 @@ def package(binary, sim, output, dll_directory=None, *, development=False, linux
     sources = output / "sources"
     sources.mkdir()
     source_archives = [archive_worktree(root_commit, sources) if development else
-                       archive_source(ROOT, root_commit, "dm-mc02-qemu", sources),
-                       archive_source(NATIVE, native_commit, "qemu", sources)]
+                       archive_source(ROOT, root_commit, "dm-mc02-simulator", sources),
+                       archive_worktree(native_commit, sources, repository=NATIVE, name="qemu")
+                       if development else archive_source(NATIVE, native_commit, "qemu", sources)]
     # libfdt is linked statically; generated keycode tables are linked into QEMU.
     # Berkeley softfloat/testfloat subprojects are only used by unpublished tests.
     source_archives.extend(archive_subproject(name, sources, licenses)
@@ -246,8 +256,9 @@ def package(binary, sim, output, dll_directory=None, *, development=False, linux
         "sources": source_archives,
         "source_submodules": "Git archives omit submodule checkouts, including ROM repositories.",
         "rust": rust_provenance(launcher, sources, licenses,
-                                ["linux-runtime"] if linux_full else
-                                ["windows-lab"] if lab else []),
+                                (["linux-runtime"] if linux_full else
+                                 ["windows-lab"] if lab else []) +
+                                (["desktop-backend"] if desktop_backend is not None else [])),
         "development_worktree": development,
     }
     if lab or linux_full:
@@ -258,7 +269,12 @@ def package(binary, sim, output, dll_directory=None, *, development=False, linux
             "license": "MIT", "notice": "licenses/LICENSE-usbip",
             "scope": "wire serialization and metadata; guest firmware owns USB classes",
         }
-        material = ROOT / "third_party/material/mdui"
+    if desktop_backend is not None:
+        provenance["desktop_backend"] = {
+            "file": backend_name, "sha256": digest(output / backend_name),
+            "scope": "private Simulator desktop session process",
+        }
+        material = ROOT / "apps/lab/src/vendor/licenses/mdui"
         notices = licenses / "mdui"
         notices.mkdir()
         for name in ("LICENSE", "THIRD-PARTY-NOTICES.txt", "PROVENANCE.json"):
@@ -268,20 +284,20 @@ def package(binary, sim, output, dll_directory=None, *, development=False, linux
             **{key: identity[key] for key in ("name", "version", "upstream", "commit")},
             "licenses": "licenses/mdui",
             "provenance": "licenses/mdui/PROVENANCE.json",
-            "vendored_sources": "third_party/material/mdui",
+            "vendored_sources": "apps/lab/src/vendor",
         }
-        terminal = ROOT / "third_party/xterm"
+        terminal = ROOT / "apps/lab/src/vendor/licenses/xterm"
         notices = licenses / "xterm"
         notices.mkdir()
         for name in ("LICENSE", "LICENSE-addon-fit", "PROVENANCE.json"):
             shutil.copy2(terminal / name, notices / name)
         provenance["web_terminal"] = {
             **json.loads((terminal / "PROVENANCE.json").read_text(encoding="utf-8")),
-            "licenses": "licenses/xterm", "vendored_sources": "third_party/xterm",
+            "licenses": "licenses/xterm", "vendored_sources": "apps/lab/src/vendor",
         }
     if lab:
         provenance["rust"]["scope"] = (
-            f"native {'Windows' if windows else 'Linux'} interactive/Web Lab, USB/IP and ARM GDB debugging")
+            f"native {'Windows' if windows else 'Linux'} interactive CLI, USB/IP and ARM GDB debugging")
     if linux_full:
         import linux_runtime
         provenance["linux_runtime"] = linux_runtime.collect(output, **linux_full)
@@ -301,21 +317,23 @@ def main():
     parser.add_argument("--sim", required=True, type=Path,
                         help="Rust CLI built with cargo build --release --locked -p sim-host")
     parser.add_argument("--output", required=True, type=Path, help="new release directory")
+    parser.add_argument("--desktop-backend", type=Path,
+                        help="private sim-lab-backend executable for a desktop runtime package")
     parser.add_argument("--dll-dir", type=Path, help="MSYS2 MinGW bin directory, for Windows")
     parser.add_argument("--linux-full", action="store_true", help="bundle the complete Linux native runtime")
     parser.add_argument("--lab", "--windows-lab", dest="lab", action="store_true",
-                        help="record the native interactive/Web Lab feature profile")
+                        help="record the native interactive CLI feature profile")
     parser.add_argument("--gazebo-prefix", type=Path, default=ROOT / "build/rust-gazebo-native/install")
     parser.add_argument("--ros-prefix", type=Path, default=Path("/opt/ros/jazzy"))
     parser.add_argument("--mujoco-prefix", type=Path, default=Path("/opt/mujoco-3.12.0"))
     parser.add_argument("--development-worktree", action="store_true",
-                        help="explicitly archive uncommitted root sources and mark the result as development")
+                        help="archive the current root and QEMU sources and mark the result as development")
     arguments = parser.parse_args()
     full = dict(gazebo_prefix=arguments.gazebo_prefix, ros_prefix=arguments.ros_prefix,
                 mujoco_prefix=arguments.mujoco_prefix) if arguments.linux_full else None
     destination = package(arguments.qemu, arguments.sim, arguments.output, arguments.dll_dir,
                           development=arguments.development_worktree, linux_full=full,
-                          lab=arguments.lab)
+                          lab=arguments.lab, desktop_backend=arguments.desktop_backend)
     print(f"Release staged: {destination}")
 
 

@@ -1,5 +1,6 @@
 [package]
 name = "sim-host"
+default-run = "sim"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,9 +8,9 @@ repository.workspace = true
 description = "Native DM-MC02 firmware launcher"
 
 [features]
-host-runtime = ["scene", "trace", "machine", "web", "worker", "devices", "referee", "socketcan", "host-processes"]
+host-runtime = ["scene", "trace", "machine", "lab", "worker", "devices", "referee", "socketcan", "host-processes"]
 linux-runtime = ["host-runtime", "mujoco", "gazebo-rendering", "ros2"]
-windows-lab = ["web"]
+windows-lab = ["lab"]
 cosim-wire = ["dep:cc"]
 simulation = ["dep:sim-core"]
 qmp = ["dep:qapi", "dep:tokio", "dep:futures", "dep:serde", "dep:serde_json"]
@@ -23,7 +24,7 @@ trace = ["dep:mcap", "dep:binrw"]
 machine = ["simulation", "boards", "qmp", "native-process", "cosim-wire"]
 lab = ["boards", "qmp", "native-process", "cosim-wire", "dep:signal-hook", "dep:object"]
 lab-session = ["lab", "dep:uuid", "dep:base64", "dep:sha2"]
-web = ["lab-session", "dep:axum", "tokio/sync", "tokio/fs"]
+desktop-backend = ["lab-session", "dep:axum", "tokio/sync", "tokio/fs"]
 worker = ["simulation", "physics", "cosim-wire", "native-process", "dep:tokio", "dep:signal-hook", "dep:roxmltree", "dep:sha2"]
 physics = ["dep:sim-core"]
 devices = ["physics"]
@@ -36,6 +37,11 @@ ros2 = ["simulation", "dep:cxx", "dep:cxx-build"]
 [[bin]]
 name = "sim"
 path = "src/main.rs"
+
+[[bin]]
+name = "sim-lab-backend"
+path = "src/desktop_backend.rs"
+required-features = ["desktop-backend"]
 
 [[example]]
 name = "host_can"
