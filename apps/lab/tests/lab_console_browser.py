@@ -21,7 +21,7 @@ def main():
     parser.add_argument("--browser-channel", choices=["chromium", "msedge", "chrome"], default="chromium")
     args = parser.parse_args()
     args.output.mkdir(parents=True)
-    report = {"status": "failed", "native_identities": [], "browser_errors": []}
+    report = {"status": "failed", "native_identities": [], "browser_errors": [], "uart_tx": []}
     process = None
     primary = None
     project_path = args.output.resolve() / "sim.lab.json"
@@ -58,8 +58,14 @@ def main():
                     page = browser.new_page(viewport={"width": 1366, "height": 768}, reduced_motion="reduce")
                     page.set_default_timeout(6000)
                     page.on("pageerror", lambda error: report["browser_errors"].append(str(error)))
+                    def track_uart(data):
+                        command = json.loads(data)
+                        if command.get("action") == "uart":
+                            report["uart_tx"].append(command["args"])
+                    page.on("websocket", lambda socket: socket.on("framesent", track_uart))
                     page.goto(url)
                     page.wait_for_function("!document.querySelector('#primary-button').disabled")
+                    assert page.locator("#uart-newline").evaluate("element=>element.value") == "crlf"
                     assert page.locator("#primary-button").inner_text() == "启动"
                     page.locator("#primary-button").click()
                     page.wait_for_function(f"({UART_TEXT}).includes('LAB_READY\\n')")
@@ -109,11 +115,16 @@ def main():
                     page.locator("#uart-data").locator("input, textarea").focus()
                     page.keyboard.press("Control+Enter")
                     page.wait_for_function(f"({UART_TEXT}).includes('UART=q\\n')")
-                    page.wait_for_function("document.querySelector('#uart-tx-status').textContent==='TX 1 B · 已接受'")
+                    page.wait_for_function("document.querySelector('#uart-tx-status').textContent==='TX 3 B · 已接受'")
+                    assert report["uart_tx"][-1] == {"endpoint": "uart1", "data_b64": "cQ0K"}
+                    # Binary input can explicitly opt out of the default CRLF.
+                    choose("#uart-newline", "none")
                     # A raw NUL survives transport and remains visible in HEX.
                     segment("#uart-mode", "hex")
                     value("#uart-data", "00")
                     page.locator("#uart-send").click()
+                    page.wait_for_function("document.querySelector('#uart-tx-status').textContent==='TX 1 B · 已接受'")
+                    assert report["uart_tx"][-1] == {"endpoint": "uart1", "data_b64": "AA=="}
                     segment("#uart-receive-format", "hex")
                     page.wait_for_function("document.querySelector('.uart-hex').textContent.includes('55 41 52 54 3D 00 0A')")
                     segment("#uart-receive-format", "text")

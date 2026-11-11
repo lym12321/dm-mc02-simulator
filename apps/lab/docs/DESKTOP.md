@@ -48,3 +48,13 @@ $desktop = (Get-Content build/desktop/latest.txt -Raw).Trim()
 ```
 
 脚本会两次提示关闭本次启动的原生窗口，最多等待三分钟；它核对退出码及本次所属 sim/QEMU 的清理。调试端口仅在测试子进程的环境中启用。`--check-early-exit` 使用一个小型 Rust fixture，因此需要 `rustc`；不指定该参数时只验收真实后端与 ELF。
+
+IDE 导出使用 WebView2 的 File System Access 另存为窗口，文件写入完成后显示文件名，并提示配置应放入的项目目录。页面仍只使用后台 HTTP 接口。原生保存与取消验收：
+
+```powershell
+.\.venv\Scripts\python.exe tests/desktop_ide_export.py `
+  --app (Join-Path $desktop 'DM-MC02 Simulator.exe') --elf 'C:\firmware\tick.elf' `
+  --output build\native-ide-export
+```
+
+按测试打印的完整路径分别保存 `launch.json` 和 `DM-MC02.run.xml`，第三次另存为选择取消，最后关闭本次测试窗口。脚本验证真实文件的调试目标、符号路径和 XML 结构，并检查取消后原文件内容保持完整。

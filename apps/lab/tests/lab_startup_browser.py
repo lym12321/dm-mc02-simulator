@@ -166,7 +166,7 @@ def main():
                     for payload in ["q", "hi", "abc"]:
                         page.locator("#uart-data").locator("input, textarea").fill(payload)
                         page.locator("#uart-send").click()
-                        page.wait_for_function("bytes=>document.querySelector('#uart-tx-status').textContent===`TX ${bytes} B · 已接受`", arg=len(payload))
+                        page.wait_for_function("bytes=>document.querySelector('#uart-tx-status').textContent===`TX ${bytes} B · 已接受`", arg=len(payload) + 2)
                     page.locator('#channel-tabs mdui-tab[value="can"]').click()
                     assert page.locator("#console-can").is_visible()
                     page.locator('#channel-tabs mdui-tab[value="uart"]').click()

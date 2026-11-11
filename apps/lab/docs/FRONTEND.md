@@ -32,6 +32,8 @@
 
 `tests/lab_uart_console_browser.py` 验证真实 xterm 的跨 chunk UTF-8、ANSI、HEX、独立 UART、清空与积压恢复。`tests/lab_console_browser.py` 使用真实桌面后台和同仓界面，验证 UART/CAN/ADC/USER、固件上传、暂停、恢复、重载与停止。后端的 HTTP/WS、控制权及生命周期测试在根目录 `crates/sim-host/tests/`。
 
+`tests/lab_ide_export_browser.py --backend <后台程序> --elf <本地ELF> --output build/ide-export` 验证三种配置内容、另存为调用、取消和写入失败，默认使用已安装的 Microsoft Edge。原生另存为窗口验收见 [DESKTOP.md](DESKTOP.md)。
+
 从 `apps/lab` 执行：
 
 ```powershell

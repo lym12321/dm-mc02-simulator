@@ -49,7 +49,7 @@
         <mdui-text-field id="uart-data" variant="outlined" label="发送内容" rows="1" maxlength="16384"></mdui-text-field>
         <div class="send-options">
           <mdui-segmented-button-group id="uart-mode" value="text" selects="single" aria-label="发送格式"><mdui-segmented-button value="text">文本</mdui-segmented-button><mdui-segmented-button value="hex">HEX</mdui-segmented-button></mdui-segmented-button-group>
-          <mdui-select id="uart-newline" variant="outlined" label="换行" value="none"><mdui-menu-item value="none">无换行</mdui-menu-item><mdui-menu-item value="lf">LF</mdui-menu-item><mdui-menu-item value="crlf">CRLF</mdui-menu-item><mdui-menu-item value="cr">CR</mdui-menu-item></mdui-select>
+          <mdui-select id="uart-newline" variant="outlined" label="换行" value="crlf"><mdui-menu-item value="none">无换行</mdui-menu-item><mdui-menu-item value="lf">LF</mdui-menu-item><mdui-menu-item value="crlf">CRLF</mdui-menu-item><mdui-menu-item value="cr">CR</mdui-menu-item></mdui-select>
           <mdui-button id="uart-send" title="发送 (Ctrl+Enter)" type="submit" variant="filled" disabled>发送</mdui-button>
         </div>
         <div id="uart-error" class="operation-error" role="alert" hidden></div>
@@ -108,6 +108,8 @@
           <div class="form-row"><mdui-checkbox id="project-gdb">GDB</mdui-checkbox><mdui-text-field id="project-gdb-port" variant="outlined" label="端口" type="number" min="1" max="65535" value="1234"></mdui-text-field></div>
           <div class="form-row"><mdui-checkbox id="project-usb">USB/IP</mdui-checkbox><mdui-text-field id="project-usb-address" variant="outlined" label="地址" value="127.0.0.1:3240"></mdui-text-field></div>
           <div class="form-row"><mdui-select id="ide-format" variant="outlined" label="IDE 配置" value="vscode"><mdui-menu-item value="vscode">VS Code · Cortex-Debug</mdui-menu-item><mdui-menu-item value="clion">CLion · Remote Debug</mdui-menu-item><mdui-menu-item value="gdb">GDB</mdui-menu-item></mdui-select><mdui-button id="ide-download" variant="text">导出</mdui-button></div>
+          <div id="ide-export-status" class="secondary-text" role="status" aria-live="polite"></div>
+          <div id="ide-error" class="operation-error" role="alert" hidden></div>
         </div>
       </mdui-collapse-item><mdui-collapse-item header="高级" id="advanced-settings">
         <div class="stack settings-group">

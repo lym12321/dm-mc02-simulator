@@ -878,7 +878,15 @@ Lab smoke 同时验证实际 GDB attach/detach 与第二 QMP monitor；需要 `a
 
 ### IDE 调试
 
-启用 GDB，并在设置中选择“等待 GDB”，或从终端运行：
+在桌面“设置”中填写本地 ELF 路径，启用 GDB，并选择“等待 GDB”。上传 ELF 后也需要填写原始文件的本地路径，供 IDE 加载调试符号。选择 IDE 配置后点击“导出”，在系统另存为窗口选择文件位置：
+
+- VS Code：保存为项目的 `.vscode/launch.json`，安装 Cortex-Debug。
+- CLion：保存为项目的 `.run/DM-MC02.run.xml`，在运行配置中选择 **DM-MC02**；配置使用 CLion 内置 GDB。
+- GDB：保存为 `attach.gdb`，运行 `arm-none-eabi-gdb -x attach.gdb`。
+
+应用设置并启动或重启仿真后，在 IDE 中连接。VS Code 和独立 GDB 需要能够找到 `arm-none-eabi-gdb`；可在导出的配置中改为本机 ARM GDB 的完整路径。QEMU 的 GDB 服务由 Simulator 管理。
+
+从终端运行时：
 
 ```bash
 sim lab interactive --project sim.lab.json --gdb-port 1234 --paused
@@ -886,10 +894,7 @@ sim lab ide --project sim.lab.json --gdb-port 1234 --format vscode > launch.json
 sim lab ide --project sim.lab.json --gdb-port 1234 --format gdb > lab.gdb
 ```
 
-VS Code 安装 Cortex-Debug，将导出的配置放入 `.vscode/launch.json`；使用 external server attach。
-CLion 新建 **Remote Debug**，选择 ARM GDB、相同本地 ELF，目标为 `127.0.0.1:1234`；
-`--format clion` 输出对应字段。普通 GDB 可执行 `arm-none-eabi-gdb -x lab.gdb`。
-网页“设置 → 调试与 USB”中选择 IDE 配置后点击“导出”。QEMU 服务由 Lab 管理，IDE 只附着调试。
+CLI 的 `--format clion` 输出 **Remote Debug** 字段，供手工填写 ARM GDB、相同本地 ELF 和目标地址；`--format vscode` 输出 Cortex-Debug external server attach 配置。
 
 <a id="desktop-lab"></a>
 

@@ -30,6 +30,7 @@
   let connected = false;
   let uploading = null;
   let saving = false;
+  let exporting = false;
   let commandNumber = 0;
   let reconnectTimer = null;
   let keyHeld = false;
@@ -400,20 +401,48 @@
     } catch (error) { fail("settings", error); }
     finally { saving = false; updateControls(); }
   }
+  function clionConfig(config) {
+    const xml = (value) => String(value).replace(/[&<>"']/g, (character) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"})[character]);
+    const symbolFile = config.symbol_file.replaceAll("\\", "/");
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<component name="ProjectRunConfigurationManager">\n  <configuration default="false" name="DM-MC02" type="CLion_Remote" factoryName="Remote Debug" version="1" remoteCommand="${xml(config.target)}" symbolFile="${xml(symbolFile)}" sysroot="">\n    <debugger kind="GDB" isBundled="true" />\n    <method v="2" />\n  </configuration>\n</component>\n`;
+  }
   async function exportIde() {
+    if (exporting) return;
     try {
-      showError("settings", "");
-      const response = await fetch("/api/ide", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(readSettings())});
+      showError("ide", "");
+      const status = $("ide-export-status");
+      status.textContent = "";
+      const settings = readSettings();
+      if (!settings.firmware) throw new Error("请填写上方的本地 ELF 路径，IDE 需要原始文件中的调试符号。");
+      if (settings.gdb_port == null) throw new Error("请先启用 GDB，再导出调试配置。");
+      if (typeof window.showSaveFilePicker !== "function") throw new Error("当前 WebView2 不支持另存为，请更新 WebView2 后重试。");
+      const format = $("ide-format").value;
+      const file = format === "vscode" ? {name: "launch.json", mime: "application/json", extension: ".json", description: "VS Code 调试配置", location: "放入项目的 .vscode/launch.json，使用 Cortex-Debug 连接。"}
+        : format === "gdb" ? {name: "attach.gdb", mime: "text/plain", extension: ".gdb", description: "GDB 命令文件", location: "运行 arm-none-eabi-gdb -x attach.gdb 连接。"}
+        : {name: "DM-MC02.run.xml", mime: "application/xml", extension: ".xml", description: "CLion 运行配置", location: "放入项目的 .run/ 目录，在 CLion 中选择 DM-MC02。"};
+      exporting = true;
+      $("ide-download").disabled = true;
+      let destination;
+      try {
+        // Open from this click before any network await consumes user activation.
+        destination = await window.showSaveFilePicker({suggestedName: file.name, excludeAcceptAllOption: true,
+          types: [{description: file.description, accept: {[file.mime]: [file.extension]}}]});
+      } catch (error) {
+        if (error.name !== "AbortError") throw error;
+        status.textContent = "已取消导出。";
+        return;
+      }
+      const response = await fetch("/api/ide", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(settings)});
       const value = await response.json();
       if (!response.ok) throw new Error(value.error || `导出失败（HTTP ${response.status}）。`);
-      const format = $("ide-format").value;
-      const config = format === "vscode" ? {name: "launch.json", mime: "application/json", text: JSON.stringify(value.vscode, null, 2) + "\n"}
-        : format === "gdb" ? {name: "attach.gdb", mime: "text/plain", text: value.gdb}
-        : {name: "clion-debug.txt", mime: "text/plain", text: `Remote Debug\nDebugger: ${value.clion.debugger}\nTarget: ${value.clion.target}\nSymbol file: ${value.clion.symbol_file}\n`};
-      const url = URL.createObjectURL(new Blob([config.text], {type: config.mime}));
-      const link = document.createElement("a"); link.href = url; link.download = config.name; link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (error) { fail("settings", error); }
+      const text = format === "vscode" ? JSON.stringify(value.vscode, null, 2) + "\n"
+        : format === "gdb" ? value.gdb : clionConfig(value.clion);
+      const writable = await destination.createWritable();
+      try { await writable.write(text); await writable.close(); }
+      catch (error) { await writable.abort().catch(() => {}); throw error; }
+      status.textContent = `已保存 ${destination.name}。${file.location}应用设置并启动或重启仿真后连接。`;
+    } catch (error) { fail("ide", error); }
+    finally { exporting = false; $("ide-download").disabled = false; }
   }
   function initialize() {
     for (const kind of ["uart", "can"]) for (const endpoint of kind === "uart" ? UARTS : CANS) {
