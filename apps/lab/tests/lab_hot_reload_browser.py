@@ -59,6 +59,7 @@ def main():
                     page.on("pageerror", lambda error: report["browser_errors"].append(str(error)))
                     page.goto(url)
                     page.wait_for_function("!document.querySelector('#settings-apply').disabled")
+                    page.locator('#channel-tabs mdui-tab[value="uart"]').click()
                     page.locator("#settings-button").click()
                     page.wait_for_function("document.querySelector('#settings-dialog').open")
                     assert page.locator("#project-watch").evaluate("element=>element.disabled && !element.checked")

@@ -11,7 +11,7 @@ fn missing_project_remains_unsaved_and_relative_elf_uses_project_directory() {
     let file = ProjectFile::open(&path).unwrap();
     assert!(!path.exists());
     let mut project = file.project().clone();
-    assert_eq!(project.imu, ImuMode::Stationary);
+    assert_eq!(project.imu, ImuMode::BoardPose);
     assert_eq!(
         serde_json::from_str::<LabProject>(r#"{"schema":"sim/lab-project/v1"}"#)
             .unwrap()

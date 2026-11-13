@@ -89,7 +89,7 @@ impl Default for LabProject {
             uarts: all_uarts(),
             cans: all_cans(),
             adc: true,
-            imu: ImuMode::Stationary,
+            imu: ImuMode::BoardPose,
             startup: StartupMode::Run,
             user_hold_ms: hold_ms(),
             startup_timeout_secs: startup_secs(),

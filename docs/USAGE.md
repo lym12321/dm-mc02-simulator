@@ -916,10 +916,15 @@ CLI 的 `--format clion` 输出 **Remote Debug** 字段，供手工填写 ARM GD
 停止实验也停止监视。路径属于运行 Lab 的电脑；上传只保留文件副本，无法监视原始编译产物。
 此选项用于桌面 Lab。
 
-主界面为全宽 UART/CAN 控制台，各自通过一个端口下拉框切换。USER 支持鼠标按住和键盘操作。
+默认首页为从 STEP 转换的 DM-MC02 三维装配，可切换二维俯视图，显示已有 LED、USER、VIN 和 USB 状态。
+点击板上串口或 CAN 接口进入对应工具页；切页保留收发记录，未启用接口显示设置入口。
+板上 USER 支持鼠标、触摸及空格/Enter 按住操作，松开、失焦或离开板卡页会释放。
+三维视图拖动旋转、滚轮缩放、右键或双指平移，可切换俯视和背面；相机操作不改变仿真输入。
+二维视图拖动平移，用缩放按钮或 Ctrl/⌘+滚轮放大；“适应窗口”恢复整板。
 “引脚与外设”中设置 GPIO、ADC、电源和 USB；底栏显示运行状态、虚拟时间、LED 和 VIN。
 “事件”中查看操作记录和原始快照。启动方式在“设置”中选择，调试、USB/IP、期限和通道配置按需展开。
-当前未随包提供实物板图或精细 3D 模型。
+未接入状态的器件仅展示外观和说明；暂停保留观测，断连后的旧数据标记为过期。
+板图及接口依据见 [板卡资料](../apps/lab/docs/BOARD.md)，RESET 尚未提供硬件复位操作。
 
 桌面拥有一个后台会话。关闭原生窗口会清理实验、后台和所属 QEMU；重新打开软件创建新会话。未收到结果的输入不会自动重发。
 默认实验 host 总期限为一小时，包含启动和暂停，启动期限为 10 秒，可在设置中调整。
@@ -1342,9 +1347,12 @@ active-low 按下状态和采样值，`led` 给出引脚、RGB、亮度和来源
 该属性只读，读取不会推进时间或消费外设状态。输入仍使用 `qom-set` 的 `user-key`
 布尔值或 `gpio-input` 字符串，例如 `A15=0`。
 
-LED 的 `ws2812-dma` 来源是既有 DMA 波形观察近似；`gpio-latch` 来源将 LED 引脚 ODR
-映射成白/黑，适合初期调试。它不表示实际引脚电气驱动，应结合 GPIO mode 和 output mask
-检查。AF/analog、电气波形和全局 CPU/plant 锁步仍未由这个接口验证。
+LED 的 `ws2812-din` 来源读取 PA7 实际输出电平，按 QEMU 虚拟时间解码 GPIO、PWM 或 SPI 波形。
+`timing_profile` 标识采用的 Worldsemi 时序，`frames`/`errors` 记录有效帧与错误，`latched_ns` 记录最近锁存时间，`powered` 表示电源状态。
+`brightness` 等于原始 RGB 中的最大通道值，显示时 RGB 只使用一次强度转换。
+`reset` 给出 NRST 的按下状态；`qom-set /machine reset-key=true/false` 按住或释放 RESET。
+`buzzer` 提供当前音调及 256 项带虚拟时间、代次和序号的事件记录。原始 `buzzer-enabled/level` QOM 属性仍保留 GPIO 直流电平观察语义。
+波形路由、参考时序和姿态坐标说明见 [板卡操作](../apps/lab/docs/BOARD.md)。
 
 Rust 自动化复用 `sim_host::boards::{validate_snapshot, digital_level}` 校验并读取同一原生 JSON。
 `digital_level("gpio.B0", &state)` 等读取公开采样值，不从 guest 内存重建 GPIO。

@@ -23,7 +23,8 @@ import psutil
 TIMEOUT = 15
 PROTOCOL = "dm-mc02-lab/v1"
 ASSETS = (
-    "index.html", "app.js", "uart-console.js", "style.css",
+    "index.html", "app.js", "uart-console.js", "board-view.js", "board-model.js", "buzzer-audio.js", "board.svg", "style.css",
+    "models/dm-mc02.glb", "vendor/three.js",
     "vendor/mdui.js", "vendor/mdui.css", "vendor/xterm.js",
     "vendor/xterm.css", "vendor/addon-fit.js",
 )
@@ -94,6 +95,13 @@ async def desktop_case(args, assets, shutdown):
             assert response.status == 200 and "desktop-snapshot" in await response.text()
             assert response.headers["Cache-Control"] == "no-store"
             assert response.headers["X-Content-Type-Options"] == "nosniff"
+            for asset, content_type in (("board.svg", "image/svg+xml"), ("board-view.js", "text/javascript"),
+                                        ("buzzer-audio.js", "text/javascript"),
+                                        ("board-model.js", "text/javascript"), ("vendor/three.js", "text/javascript"),
+                                        ("models/dm-mc02.glb", "model/gltf-binary")):
+                response = await client.get(url + "/" + asset)
+                assert response.status == 200 and response.content_type == content_type
+                assert await response.read() == (assets / asset).read_bytes()
             assert (await client.get(url + "/private.txt")).status == 404
             for headers in ({"Origin": "tauri://localhost"}, {"Host": "foreign.example"}):
                 assert (await client.get(url + "/api/info", headers=headers)).status == 403

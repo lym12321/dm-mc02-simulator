@@ -1,0 +1,1739 @@
+{
+  "source": {
+    "file": "CtrBoard-H7_V1.0-240124.pdf",
+    "sha256": "3c1ca47e807d6c4031aac10af605021e85e47bd56c65f664543bb947ad35595d",
+    "pages": 6,
+    "date": "2024-01-24"
+  },
+  "parts": {
+    "BUZZER1": {
+      "label": "蜂鸣器",
+      "description": "MLT-5020 蜂鸣器，经 Q2 驱动，控制信号为 PB15 / TIM12_CH2。",
+      "schematicPage": 2,
+      "value": "MLT-5020",
+      "component": "buzzer"
+    },
+    "Board": {
+      "label": "DM-MC02 控制板",
+      "description": "56 × 40 mm 控制板，搭载 STM32H723、BMI088 和 W25Q64JV。"
+    },
+    "C1": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C2": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C3": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C4": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C5": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C6": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C7": {
+      "label": "贴片电容",
+      "description": "24 MHz 晶振负载电容。",
+      "schematicPage": 1,
+      "value": "18pF/0201/10V"
+    },
+    "C8": {
+      "label": "贴片电容",
+      "description": "W25Q64JV 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C9": {
+      "label": "贴片电容",
+      "description": "NRST 复位信号滤波电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C10": {
+      "label": "贴片电容",
+      "description": "24 MHz 晶振负载电容。",
+      "schematicPage": 1,
+      "value": "18pF/0603/50V"
+    },
+    "C11": {
+      "label": "贴片电容",
+      "description": "CAN1 收发器电源去耦电容。",
+      "schematicPage": 4,
+      "value": "100nF/0201/10V"
+    },
+    "C12": {
+      "label": "贴片电容",
+      "description": "CAN1 收发器电源去耦电容。",
+      "schematicPage": 4,
+      "value": "100nF/0201/10V"
+    },
+    "C13": {
+      "label": "贴片电容",
+      "description": "CAN2 收发器电源去耦电容。",
+      "schematicPage": 4,
+      "value": "100nF/0201/10V"
+    },
+    "C14": {
+      "label": "贴片电容",
+      "description": "CAN2 收发器电源去耦电容。",
+      "schematicPage": 4,
+      "value": "100nF/0201/10V"
+    },
+    "C15": {
+      "label": "贴片电容",
+      "description": "RS485 收发器电源去耦电容。",
+      "schematicPage": 5,
+      "value": "100nF/0201/10V"
+    },
+    "C16": {
+      "label": "贴片电容",
+      "description": "RS485 收发器电源去耦电容。",
+      "schematicPage": 5,
+      "value": "100nF/0201/10V"
+    },
+    "C17": {
+      "label": "贴片电容",
+      "description": "蜂鸣器供电滤波电容。",
+      "schematicPage": 2,
+      "value": "22uF/0603/10V"
+    },
+    "C18": {
+      "label": "贴片电容",
+      "description": "OUT1 电源控制滤波电容。",
+      "schematicPage": 3,
+      "value": "100nF/0201/10V"
+    },
+    "C19": {
+      "label": "贴片电容",
+      "description": "OUT2 电源控制滤波电容。",
+      "schematicPage": 3,
+      "value": "100nF/0201/10V"
+    },
+    "C20": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源电路电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C21": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源电路电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C22": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C23": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C24": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C25": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C26": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C27": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C28": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C29": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C30": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源反馈电路电容。",
+      "schematicPage": 3,
+      "value": "47pF/0402/50V"
+    },
+    "C31": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源电路电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C32": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C33": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C34": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C35": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C36": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C37": {
+      "label": "贴片电容",
+      "description": "5 V 外供电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C38": {
+      "label": "贴片电容",
+      "description": "C38 · 贴片电容。"
+    },
+    "C39": {
+      "label": "贴片电容",
+      "description": "C39 · 贴片电容。"
+    },
+    "C40": {
+      "label": "贴片电容",
+      "description": "BL9342 系统 5 V 电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C41": {
+      "label": "贴片电容",
+      "description": "BL9342 系统 5 V 电源电路电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C42": {
+      "label": "贴片电容",
+      "description": "BL9342 系统 5 V 电源电路电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C43": {
+      "label": "贴片电容",
+      "description": "系统 5 V 电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C44": {
+      "label": "贴片电容",
+      "description": "BL9342 系统 5 V 电源电路电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C45": {
+      "label": "贴片电容",
+      "description": "系统 5 V 电源配置电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V-NC"
+    },
+    "C46": {
+      "label": "贴片电容",
+      "description": "系统 5 V 电源反馈电路电容。",
+      "schematicPage": 3,
+      "value": "33pF/0402/50V"
+    },
+    "C47": {
+      "label": "贴片电容",
+      "description": "系统 3.3 V 电源反馈电路电容。",
+      "schematicPage": 3,
+      "value": "22pF/0402/50V"
+    },
+    "C48": {
+      "label": "贴片电容",
+      "description": "系统 3.3 V 电源滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C49": {
+      "label": "贴片电容",
+      "description": "系统 3.3 V 电源去耦电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C50": {
+      "label": "贴片电容",
+      "description": "系统 3.3 V 电源滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C51": {
+      "label": "贴片电容",
+      "description": "系统 3.3 V 电源滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C52": {
+      "label": "贴片电容",
+      "description": "系统 3.3 V 电源去耦电容。",
+      "schematicPage": 3,
+      "value": "100nF/0402/50V"
+    },
+    "C53": {
+      "label": "贴片电容",
+      "description": "PC4 / ADC1_CH4 输入电压采样滤波电容。",
+      "schematicPage": 2,
+      "value": "100nF/0201/10V"
+    },
+    "C54": {
+      "label": "贴片电容",
+      "description": "OUT2 功率开关 Q4 的栅源滤波电容。",
+      "schematicPage": 3,
+      "value": "220nF/0402/50V"
+    },
+    "C55": {
+      "label": "贴片电容",
+      "description": "OUT1 功率开关 Q3 的栅源滤波电容。",
+      "schematicPage": 3,
+      "value": "220nF/0402/50V"
+    },
+    "C56": {
+      "label": "贴片电容",
+      "description": "C56 · 贴片电容。"
+    },
+    "C57": {
+      "label": "贴片电容",
+      "description": "系统 5 V 电源输出滤波电容。",
+      "schematicPage": 3,
+      "value": "22uF/0603/10V"
+    },
+    "C58": {
+      "label": "贴片电容",
+      "description": "主控 VCAP 内核稳压去耦电容。",
+      "schematicPage": 1,
+      "value": "2.2uF/0201/6.3V"
+    },
+    "C59": {
+      "label": "贴片电容",
+      "description": "主控 VCAP 内核稳压去耦电容。",
+      "schematicPage": 1,
+      "value": "2.2uF/0201/6.3V"
+    },
+    "C60": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "C61": {
+      "label": "贴片电容",
+      "description": "CAN3 收发器电源去耦电容。",
+      "schematicPage": 4,
+      "value": "100nF/0201/10V"
+    },
+    "C62": {
+      "label": "贴片电容",
+      "description": "CAN3 收发器电源去耦电容。",
+      "schematicPage": 4,
+      "value": "100nF/0201/10V"
+    },
+    "C63": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源去耦电容。",
+      "schematicPage": 6,
+      "value": "100nF/0201/10V"
+    },
+    "C64": {
+      "label": "贴片电容",
+      "description": "摄像头 RESET 信号滤波，与 R95 配合。",
+      "schematicPage": 6,
+      "value": "100nF/0201/10V"
+    },
+    "C65": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源滤波电容。",
+      "schematicPage": 6,
+      "value": "2.2uF/0201/6.3V"
+    },
+    "C66": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源去耦电容。",
+      "schematicPage": 6,
+      "value": "100nF/0201/10V"
+    },
+    "C67": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源滤波电容。",
+      "schematicPage": 6,
+      "value": "2.2uF/0201/6.3V"
+    },
+    "C68": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源去耦电容。",
+      "schematicPage": 6,
+      "value": "100nF/0201/10V"
+    },
+    "C69": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源滤波电容。",
+      "schematicPage": 6,
+      "value": "2.2uF/0201/6.3V"
+    },
+    "C70": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源去耦电容。",
+      "schematicPage": 6,
+      "value": "100nF/0201/10V"
+    },
+    "C71": {
+      "label": "贴片电容",
+      "description": "摄像头接口电源滤波电容。",
+      "schematicPage": 6,
+      "value": "2.2uF/0201/6.3V"
+    },
+    "C72": {
+      "label": "贴片电容",
+      "description": "BL9342 系统 5 V 电源输入滤波电容。",
+      "schematicPage": 3,
+      "value": "10uF/1206/50V"
+    },
+    "C73": {
+      "label": "贴片电容",
+      "description": "STM32H723 电源去耦电容。",
+      "schematicPage": 1,
+      "value": "100nF/0201/10V"
+    },
+    "D1": {
+      "label": "总线保护二极管",
+      "description": "CAN1 信号线的保护器件。",
+      "schematicPage": 4
+    },
+    "D2": {
+      "label": "总线保护二极管",
+      "description": "CAN1 信号线的保护器件。",
+      "schematicPage": 4
+    },
+    "D3": {
+      "label": "总线保护二极管",
+      "description": "CAN2 信号线的保护器件。",
+      "schematicPage": 4
+    },
+    "D4": {
+      "label": "总线保护二极管",
+      "description": "CAN2 信号线的保护器件。",
+      "schematicPage": 4
+    },
+    "D5": {
+      "label": "蜂鸣器续流二极管",
+      "description": "并接在蜂鸣器驱动回路，吸收关断时的感性电压。",
+      "schematicPage": 2,
+      "value": "SD103AWS"
+    },
+    "D6": {
+      "label": "OUT1 栅极稳压二极管",
+      "description": "OUT1 功率开关的栅极电压保护。",
+      "schematicPage": 3,
+      "value": "BZX584C9V1"
+    },
+    "D7": {
+      "label": "OUT2 栅极稳压二极管",
+      "description": "OUT2 功率开关的栅极电压保护。",
+      "schematicPage": 3,
+      "value": "BZX584C9V1"
+    },
+    "D8": {
+      "label": "二极管",
+      "description": "D8 · 二极管。"
+    },
+    "D9": {
+      "label": "二极管",
+      "description": "D9 · 二极管。"
+    },
+    "D10": {
+      "label": "5 V 电源续流二极管",
+      "description": "U10 降压电源的开关续流通路。",
+      "schematicPage": 3,
+      "value": "SS54B"
+    },
+    "D11": {
+      "label": "二极管",
+      "description": "D11 · 二极管。"
+    },
+    "D12": {
+      "label": "二极管",
+      "description": "D12 · 二极管。"
+    },
+    "D13": {
+      "label": "系统 5 V 续流二极管",
+      "description": "连接 BL9342 的 SW 开关节点与 GND，提供续流通路。",
+      "schematicPage": 3,
+      "value": "SD103AWS"
+    },
+    "D14": {
+      "label": "USB 供电二极管",
+      "description": "连接 USB VBUS 与 VCC_5VS 供电通路。",
+      "schematicPage": 2,
+      "value": "SD103AWS"
+    },
+    "D15": {
+      "label": "ESD 静电保护",
+      "description": "USART1 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D16": {
+      "label": "ESD 静电保护",
+      "description": "USART1 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D17": {
+      "label": "ESD 静电保护",
+      "description": "UART7 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D18": {
+      "label": "ESD 静电保护",
+      "description": "UART7 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D19": {
+      "label": "ESD 静电保护",
+      "description": "SWD 信号线的静电保护。",
+      "schematicPage": 1,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D20": {
+      "label": "ESD 静电保护",
+      "description": "SWD 信号线的静电保护。",
+      "schematicPage": 1,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D21": {
+      "label": "ESD 静电保护",
+      "description": "PWM 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D22": {
+      "label": "ESD 静电保护",
+      "description": "PWM 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D23": {
+      "label": "ESD 静电保护",
+      "description": "PWM 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D24": {
+      "label": "ESD 静电保护",
+      "description": "PWM 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D25": {
+      "label": "ESD 静电保护",
+      "description": "USART10 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D26": {
+      "label": "ESD 静电保护",
+      "description": "USART10 信号线的静电保护。",
+      "schematicPage": 2,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D27": {
+      "label": "总线保护二极管",
+      "description": "CAN3 信号线的保护器件。",
+      "schematicPage": 4
+    },
+    "D28": {
+      "label": "总线保护二极管",
+      "description": "CAN3 信号线的保护器件。",
+      "schematicPage": 4
+    },
+    "D29": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D30": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D31": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D32": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D33": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D34": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D35": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D36": {
+      "label": "ESD 静电保护",
+      "description": "SPI / I²C 扩展 信号线的静电保护。",
+      "schematicPage": 5,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D37": {
+      "label": "摄像头复位二极管",
+      "description": "连接 PB12 控制信号与摄像头 RESET；接口侧由 R95 上拉到 2.8 V。",
+      "schematicPage": 6,
+      "value": "SD103AWS"
+    },
+    "D38": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D39": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D40": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D41": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D42": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D43": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D44": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "D45": {
+      "label": "ESD 静电保护",
+      "description": "24Pin 扩展 信号线的静电保护。",
+      "schematicPage": 6,
+      "value": "ESD9B5.0ST5G"
+    },
+    "F1": {
+      "label": "自恢复保险丝",
+      "description": "CAN2 信号线的串联保护器件。",
+      "schematicPage": 4,
+      "value": "JK-SMD0603-005"
+    },
+    "F2": {
+      "label": "自恢复保险丝",
+      "description": "CAN2 信号线的串联保护器件。",
+      "schematicPage": 4,
+      "value": "JK-SMD0603-005"
+    },
+    "F3": {
+      "label": "自恢复保险丝",
+      "description": "CAN3 信号线的串联保护器件。",
+      "schematicPage": 4,
+      "value": "JK-SMD0603-005"
+    },
+    "F4": {
+      "label": "自恢复保险丝",
+      "description": "CAN3 信号线的串联保护器件。",
+      "schematicPage": 4,
+      "value": "JK-SMD0603-005"
+    },
+    "F5": {
+      "label": "自恢复保险丝",
+      "description": "RS485 A2 / B2 信号线的串联保护器件。",
+      "schematicPage": 5,
+      "value": "JK-SMD0603-005"
+    },
+    "F6": {
+      "label": "自恢复保险丝",
+      "description": "RS485 A1 / B1 信号线的串联保护器件。",
+      "schematicPage": 5,
+      "value": "JK-SMD0603-005"
+    },
+    "F7": {
+      "label": "自恢复保险丝",
+      "description": "RS485 A2 / B2 信号线的串联保护器件。",
+      "schematicPage": 5,
+      "value": "JK-SMD0603-005"
+    },
+    "F8": {
+      "label": "自恢复保险丝",
+      "description": "RS485 A1 / B1 信号线的串联保护器件。",
+      "schematicPage": 5,
+      "value": "JK-SMD0603-005"
+    },
+    "F9": {
+      "label": "自恢复保险丝",
+      "description": "CAN1 信号线的串联保护器件。",
+      "schematicPage": 4,
+      "value": "JK-SMD0603-005"
+    },
+    "F10": {
+      "label": "自恢复保险丝",
+      "description": "CAN1 信号线的串联保护器件。",
+      "schematicPage": 4,
+      "value": "JK-SMD0603-005"
+    },
+    "FPC1": {
+      "label": "DCMI · 摄像头接口",
+      "description": "引出 DCMI 八位数据、像素时钟、行场同步、24 MHz 时钟、控制与 I²C 信号；供电包含 2.8 V 和 1.5 V。",
+      "schematicPage": 6,
+      "value": "HC-FPC-05-09-24RLTAG"
+    },
+    "J1": {
+      "label": "USB · Type-C",
+      "description": "USB 全速数据接口，D+ / D− 连接 PA12 / PA11，VBUS 接入板卡供电。",
+      "schematicPage": 2,
+      "value": "TYPE-C 16",
+      "component": "usb"
+    },
+    "L1": {
+      "label": "CAN1 共模电感",
+      "description": "CAN1 差分线上的共模滤波器件。",
+      "schematicPage": 4,
+      "value": "ACT45B"
+    },
+    "L2": {
+      "label": "CAN2 共模电感",
+      "description": "CAN2 差分线上的共模滤波器件。",
+      "schematicPage": 4,
+      "value": "ACT45B"
+    },
+    "L3": {
+      "label": "5 V 外供电源电感",
+      "description": "与 U10 组成降压输出滤波电路。",
+      "schematicPage": 3,
+      "value": "MHCI06030-6R8M-R8"
+    },
+    "L4": {
+      "label": "系统 5 V 电源电感",
+      "description": "与 BL9342 组成降压输出滤波电路。",
+      "schematicPage": 3,
+      "value": "10uH 800mA L1008"
+    },
+    "L5": {
+      "label": "系统 3.3 V 电源电感",
+      "description": "与 U12 组成降压输出滤波电路。",
+      "schematicPage": 3,
+      "value": "PSPNAQ252012-2R2M"
+    },
+    "L6": {
+      "label": "CAN3 共模电感",
+      "description": "CAN3 差分线上的共模滤波器件。",
+      "schematicPage": 4,
+      "value": "ACT45B"
+    },
+    "LED1": {
+      "label": "OUT1 指示灯",
+      "description": "OUT1 电源控制电路的红色指示灯。",
+      "schematicPage": 3,
+      "value": "LED-R 0603"
+    },
+    "LED2": {
+      "label": "OUT2 指示灯",
+      "description": "OUT2 电源控制电路的红色指示灯。",
+      "schematicPage": 3,
+      "value": "LED-R 0603"
+    },
+    "LED3": {
+      "label": "WS2812B · RGB 指示灯",
+      "description": "PA7 驱动的 RGB 指示灯，使用 VCC_5VS 供电。",
+      "schematicPage": 1,
+      "value": "WS2812B-3528",
+      "component": "led"
+    },
+    "LED5": {
+      "label": "5 V 输出指示灯",
+      "description": "VCC_5V 电源轨的红色指示灯。",
+      "schematicPage": 3,
+      "value": "LED-R 0603"
+    },
+    "P1": {
+      "label": "SWD · 调试接口",
+      "description": "引出 SWCLK（PA14）、SWDIO（PA13）、3.3 V 与 GND。",
+      "schematicPage": 1,
+      "value": "53261-0471",
+      "component": "swd"
+    },
+    "P2": {
+      "label": "CAN1",
+      "description": "CAN1_H / CAN1_L 信号接口，与对应 XT30 2+2 插口共用总线。",
+      "schematicPage": 4,
+      "value": "SM02B-GHS",
+      "component": "can1"
+    },
+    "P3": {
+      "label": "CAN2",
+      "description": "CAN2_H / CAN2_L 信号接口，与对应 XT30 2+2 插口共用总线。",
+      "schematicPage": 4,
+      "value": "SM02B-GHS",
+      "component": "can2"
+    },
+    "P4": {
+      "label": "USART2 · RS485",
+      "description": "RS485 A2 / B2 信号接口，PD4 控制收发方向。",
+      "schematicPage": 5,
+      "value": "SM02B-GHS",
+      "component": "uart2"
+    },
+    "P5": {
+      "label": "USART3 · RS485",
+      "description": "RS485 A1 / B1 信号接口，PB14 控制收发方向。",
+      "schematicPage": 5,
+      "value": "SM02B-GHS",
+      "component": "uart3"
+    },
+    "P6": {
+      "label": "SBUS · UART5 RX",
+      "description": "三针接收机接口，信号经 Q1 整形后连接 PD2 / UART5_RX。",
+      "schematicPage": 5,
+      "value": "P3*2.54",
+      "component": "uart5"
+    },
+    "P7": {
+      "label": "CAN1 · 可控电源接口",
+      "description": "XT30 2+2 引出 OUT1 电源与 CAN1_H / CAN1_L，PC14 控制电源使能。",
+      "schematicPage": 3,
+      "value": "XT30PW-M (2+2)",
+      "component": "out1"
+    },
+    "P8": {
+      "label": "CAN2 · 可控电源接口",
+      "description": "XT30 2+2 引出 OUT2 电源与 CAN2_H / CAN2_L，PC13 控制电源使能。",
+      "schematicPage": 3,
+      "value": "XT30PW-M (2+2)",
+      "component": "out2"
+    },
+    "P9": {
+      "label": "VIN · 电源输入",
+      "description": "XT30 板卡电源输入接口。",
+      "component": "vin"
+    },
+    "P10": {
+      "label": "USART1",
+      "description": "TTL 串口接口，PA9 TX / PA10 RX 与 GND。",
+      "schematicPage": 2,
+      "value": "SM03B-GH",
+      "component": "uart1"
+    },
+    "P11": {
+      "label": "PWM · 四路扩展",
+      "description": "4 × 3 排针引出 PA0 / TIM2_CH1、PA2 / TIM2_CH3、PE9 / TIM1_CH1、PE13 / TIM1_CH3，以及 5 V 和 GND。",
+      "schematicPage": 2,
+      "value": "4 × 3 排针",
+      "component": "pwm"
+    },
+    "P12": {
+      "label": "CAN3",
+      "description": "引出 CAN3_H / CAN3_L 与供电，和 P16 扩展口共用 CAN3 总线。",
+      "schematicPage": 4,
+      "value": "A1257wv-s-4P",
+      "component": "can3"
+    },
+    "P13": {
+      "label": "UART7",
+      "description": "四针接口，引出 PE8 TX / PE7 RX、5 V 与 GND。",
+      "schematicPage": 2,
+      "value": "A1257wv-s-4P",
+      "component": "uart7"
+    },
+    "P15": {
+      "label": "USART10",
+      "description": "四针接口，引出 PE3 TX / PE2 RX、5 V 与 GND。",
+      "schematicPage": 2,
+      "value": "A1257wv-s-4P",
+      "component": "uart10"
+    },
+    "P16": {
+      "label": "24Pin · 扩展接口",
+      "description": "引出 UART8/9、SPI3、I²C、CAN3、两组 RS485、PE14，以及输入电源、5 V、3.3 V 与 GND。",
+      "schematicPage": 6,
+      "value": "SGDBF-08-024P-H35",
+      "component": "expansion"
+    },
+    "Q1": {
+      "label": "接收机信号整形",
+      "description": "SBUS / DBUS 接口信号整形，输出连接 PD2 / UART5_RX。",
+      "schematicPage": 5
+    },
+    "Q2": {
+      "label": "蜂鸣器驱动",
+      "description": "由 PB15 / TIM12_CH2 控制 BUZZER1。",
+      "schematicPage": 2
+    },
+    "Q3": {
+      "label": "OUT1 功率开关",
+      "description": "OUT1 电源输出通路的 P 沟道 MOSFET，控制电路连接 PC14。",
+      "schematicPage": 3,
+      "value": "HYG110P04LQ2C2"
+    },
+    "Q4": {
+      "label": "OUT2 功率开关",
+      "description": "OUT2 电源输出通路的 P 沟道 MOSFET，控制电路连接 PC13。",
+      "schematicPage": 3,
+      "value": "HYG110P04LQ2C2"
+    },
+    "Q5": {
+      "label": "OUT1 开关驱动",
+      "description": "连接 Power_OUT1_EN，驱动 OUT1 功率开关 Q3。",
+      "schematicPage": 3
+    },
+    "Q6": {
+      "label": "OUT2 开关驱动",
+      "description": "连接 Power_OUT2_EN，驱动 OUT2 功率开关 Q4。",
+      "schematicPage": 3
+    },
+    "Q7": {
+      "label": "晶体管",
+      "description": "Q7 · 晶体管。"
+    },
+    "Q8": {
+      "label": "晶体管",
+      "description": "Q8 · 晶体管。"
+    },
+    "Q9": {
+      "label": "IMU 加热开关",
+      "description": "控制 R77–R84、R88–R89 加热电阻阵列，栅极连接 PB1 / TIM3_CH4。",
+      "schematicPage": 2,
+      "value": "CJ2310"
+    },
+    "R1": {
+      "label": "贴片电阻",
+      "description": "NRST 复位信号上拉。",
+      "schematicPage": 1,
+      "value": "10K/0201/1%"
+    },
+    "R2": {
+      "label": "贴片电阻",
+      "description": "BOOT0 启动配置电路电阻。",
+      "schematicPage": 1,
+      "value": "10K/0201/1%"
+    },
+    "R3": {
+      "label": "贴片电阻",
+      "description": "CAN1 电路配置电阻。",
+      "schematicPage": 4,
+      "value": "2R2/0402/5%-NC"
+    },
+    "R4": {
+      "label": "贴片电阻",
+      "description": "SWD 调试信号串联电阻。",
+      "schematicPage": 1,
+      "value": "22R/0201/1%"
+    },
+    "R5": {
+      "label": "贴片电阻",
+      "description": "CAN1 总线终端电阻。",
+      "schematicPage": 4,
+      "value": "120R/0603/5%"
+    },
+    "R6": {
+      "label": "贴片电阻",
+      "description": "SWD 调试信号串联电阻。",
+      "schematicPage": 1,
+      "value": "22R/0201/1%"
+    },
+    "R7": {
+      "label": "贴片电阻",
+      "description": "CAN1 电路配置电阻。",
+      "schematicPage": 4,
+      "value": "2R2/0402/5%-NC"
+    },
+    "R8": {
+      "label": "贴片电阻",
+      "description": "CAN2 电路配置电阻。",
+      "schematicPage": 4,
+      "value": "2R2/0402/5%-NC"
+    },
+    "R9": {
+      "label": "贴片电阻",
+      "description": "CAN2 总线终端电阻。",
+      "schematicPage": 4,
+      "value": "120R/0603/5%"
+    },
+    "R10": {
+      "label": "贴片电阻",
+      "description": "CAN2 电路配置电阻。",
+      "schematicPage": 4,
+      "value": "2R2/0402/5%-NC"
+    },
+    "R11": {
+      "label": "贴片电阻",
+      "description": "RS485 收发器控制电路电阻。",
+      "schematicPage": 5,
+      "value": "10K/0201/1%"
+    },
+    "R12": {
+      "label": "贴片电阻",
+      "description": "RS485 收发器控制电路电阻。",
+      "schematicPage": 5,
+      "value": "10K/0201/1%"
+    },
+    "R13": {
+      "label": "贴片电阻",
+      "description": "USB Type-C CC 引脚下拉。",
+      "schematicPage": 2,
+      "value": "4.7k/0201/1%"
+    },
+    "R14": {
+      "label": "贴片电阻",
+      "description": "USB Type-C CC 引脚下拉。",
+      "schematicPage": 2,
+      "value": "4.7k/0201/1%"
+    },
+    "R15": {
+      "label": "贴片电阻",
+      "description": "RS485 总线终端电阻。",
+      "schematicPage": 5,
+      "value": "120R/0603/5%"
+    },
+    "R16": {
+      "label": "贴片电阻",
+      "description": "RS485 总线终端电阻。",
+      "schematicPage": 5,
+      "value": "120R/0603/5%"
+    },
+    "R17": {
+      "label": "贴片电阻",
+      "description": "RS485 收发器控制电路电阻。",
+      "schematicPage": 5,
+      "value": "10K/0201/1%"
+    },
+    "R18": {
+      "label": "贴片电阻",
+      "description": "RS485 收发器控制电路电阻。",
+      "schematicPage": 5,
+      "value": "10K/0201/1%"
+    },
+    "R19": {
+      "label": "贴片电阻",
+      "description": "接收机输入信号整形电路电阻。",
+      "schematicPage": 5,
+      "value": "4.7k/0201/1%"
+    },
+    "R20": {
+      "label": "贴片电阻",
+      "description": "蜂鸣器驱动控制电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R21": {
+      "label": "贴片电阻",
+      "description": "接收机输入信号整形电路电阻。",
+      "schematicPage": 5,
+      "value": "4.7k/0201/1%"
+    },
+    "R22": {
+      "label": "贴片电阻",
+      "description": "蜂鸣器驱动控制电阻。",
+      "schematicPage": 2,
+      "value": "10K/0201/1%"
+    },
+    "R23": {
+      "label": "贴片电阻",
+      "description": "OUT1 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "10K/0201/1%"
+    },
+    "R24": {
+      "label": "贴片电阻",
+      "description": "OUT2 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "10K/0201/1%"
+    },
+    "R25": {
+      "label": "贴片电阻",
+      "description": "OUT1 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "100k/0201/1%"
+    },
+    "R26": {
+      "label": "贴片电阻",
+      "description": "OUT2 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "100k/0201/1%"
+    },
+    "R27": {
+      "label": "贴片电阻",
+      "description": "OUT1 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "10K/0201/1%"
+    },
+    "R28": {
+      "label": "贴片电阻",
+      "description": "OUT2 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "10K/0201/1%"
+    },
+    "R29": {
+      "label": "贴片电阻",
+      "description": "OUT1 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "1K/0201/1%"
+    },
+    "R30": {
+      "label": "贴片电阻",
+      "description": "OUT1 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "10K/0201/1%"
+    },
+    "R31": {
+      "label": "贴片电阻",
+      "description": "OUT2 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "1K/0201/1%"
+    },
+    "R32": {
+      "label": "贴片电阻",
+      "description": "OUT2 电源控制电路电阻。",
+      "schematicPage": 3,
+      "value": "10K/0201/1%"
+    },
+    "R33": {
+      "label": "贴片电阻",
+      "description": "R33 · 贴片电阻。"
+    },
+    "R34": {
+      "label": "贴片电阻",
+      "description": "R34 · 贴片电阻。"
+    },
+    "R35": {
+      "label": "贴片电阻",
+      "description": "R35 · 贴片电阻。"
+    },
+    "R36": {
+      "label": "贴片电阻",
+      "description": "R36 · 贴片电阻。"
+    },
+    "R37": {
+      "label": "贴片电阻",
+      "description": "R37 · 贴片电阻。"
+    },
+    "R38": {
+      "label": "贴片电阻",
+      "description": "5 V 外供电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "10k/0402/1%"
+    },
+    "R39": {
+      "label": "贴片电阻",
+      "description": "5 V 外供电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "10R/0402/1%"
+    },
+    "R40": {
+      "label": "贴片电阻",
+      "description": "5 V 外供电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "40.2k/0402/1%"
+    },
+    "R41": {
+      "label": "贴片电阻",
+      "description": "R41 · 贴片电阻。"
+    },
+    "R42": {
+      "label": "贴片电阻",
+      "description": "5 V 外供电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "13K/0402/1%"
+    },
+    "R43": {
+      "label": "贴片电阻",
+      "description": "BL9342 系统 5 V 电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "10R/0402/1%"
+    },
+    "R44": {
+      "label": "贴片电阻",
+      "description": "BL9342 系统 5 V 电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "100k/0402/1%"
+    },
+    "R45": {
+      "label": "贴片电阻",
+      "description": "BL9342 系统 5 V 电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "10R/0402/1%-NC"
+    },
+    "R46": {
+      "label": "贴片电阻",
+      "description": "BL9342 系统 5 V 电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "40.2K/0402/1%"
+    },
+    "R47": {
+      "label": "贴片电阻",
+      "description": "BL9342 系统 5 V 电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "7.68K/0402/1%"
+    },
+    "R48": {
+      "label": "贴片电阻",
+      "description": "系统 3.3 V 电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "100k/0402/1%"
+    },
+    "R49": {
+      "label": "贴片电阻",
+      "description": "系统 3.3 V 电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "100k/0402/1%"
+    },
+    "R50": {
+      "label": "贴片电阻",
+      "description": "系统 3.3 V 电源反馈分压电阻。",
+      "schematicPage": 3,
+      "value": "22.1K/0402/1%"
+    },
+    "R51": {
+      "label": "贴片电阻",
+      "description": "5 V 外供电源控制与反馈电路电阻。",
+      "schematicPage": 3,
+      "value": "100k/0402/1%"
+    },
+    "R52": {
+      "label": "贴片电阻",
+      "description": "BOOT0 焊盘连接电阻。",
+      "schematicPage": 1,
+      "value": "22R/0201/1%"
+    },
+    "R53": {
+      "label": "贴片电阻",
+      "description": "USB D+ / D− 串联电阻。",
+      "schematicPage": 1,
+      "value": "22R/0201/1%"
+    },
+    "R54": {
+      "label": "贴片电阻",
+      "description": "USB D+ / D− 串联电阻。",
+      "schematicPage": 1,
+      "value": "22R/0201/1%"
+    },
+    "R55": {
+      "label": "贴片电阻",
+      "description": "SPI / I²C 扩展接口串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R56": {
+      "label": "贴片电阻",
+      "description": "SPI / I²C 扩展接口串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R57": {
+      "label": "贴片电阻",
+      "description": "SPI / I²C 扩展接口串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R58": {
+      "label": "贴片电阻",
+      "description": "SPI / I²C 扩展接口串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R59": {
+      "label": "贴片电阻",
+      "description": "SPI / I²C 扩展接口串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R60": {
+      "label": "贴片电阻",
+      "description": "SPI / I²C 扩展接口串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R61": {
+      "label": "贴片电阻",
+      "description": "USER 按键 PA15 信号上拉至 3.3 V。",
+      "schematicPage": 5,
+      "value": "10K/0201/1%"
+    },
+    "R62": {
+      "label": "贴片电阻",
+      "description": "SPI / I²C 扩展接口串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R63": {
+      "label": "贴片电阻",
+      "description": "PA5 / ADC1_CH18 扩展输入串联电阻。",
+      "schematicPage": 5,
+      "value": "22R/0201/1%"
+    },
+    "R64": {
+      "label": "贴片电阻",
+      "description": "UART7 信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R65": {
+      "label": "贴片电阻",
+      "description": "UART7 信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R66": {
+      "label": "贴片电阻",
+      "description": "四路 PWM 输出信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R67": {
+      "label": "贴片电阻",
+      "description": "四路 PWM 输出信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R68": {
+      "label": "贴片电阻",
+      "description": "四路 PWM 输出信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R69": {
+      "label": "贴片电阻",
+      "description": "四路 PWM 输出信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R70": {
+      "label": "贴片电阻",
+      "description": "USART1 信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R71": {
+      "label": "贴片电阻",
+      "description": "USART1 信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R72": {
+      "label": "贴片电阻",
+      "description": "USART10 信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R73": {
+      "label": "贴片电阻",
+      "description": "CAN3 电路配置电阻。",
+      "schematicPage": 4,
+      "value": "2R2/0402/5%-NC"
+    },
+    "R74": {
+      "label": "贴片电阻",
+      "description": "USART10 信号串联电阻。",
+      "schematicPage": 2,
+      "value": "22R/0201/1%"
+    },
+    "R75": {
+      "label": "贴片电阻",
+      "description": "CAN3 总线终端电阻。",
+      "schematicPage": 4,
+      "value": "120R/0603/5%"
+    },
+    "R76": {
+      "label": "贴片电阻",
+      "description": "CAN3 电路配置电阻。",
+      "schematicPage": 4,
+      "value": "2R2/0402/5%-NC"
+    },
+    "R77": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R78": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R79": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R80": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R81": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R82": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R83": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R84": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R85": {
+      "label": "贴片电阻",
+      "description": "5 V 输出指示灯 LED5 限流电阻。",
+      "schematicPage": 3,
+      "value": "10K/0201/1%"
+    },
+    "R86": {
+      "label": "贴片电阻",
+      "description": "输入电压采样分压的上臂，分压点连接 PC4 / ADC1_CH4。",
+      "schematicPage": 2,
+      "value": "100K/0201/1%"
+    },
+    "R87": {
+      "label": "贴片电阻",
+      "description": "输入电压采样分压的下臂，与 R86 组成 1:11 分压。",
+      "schematicPage": 2,
+      "value": "10K/0201/1%"
+    },
+    "R88": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R89": {
+      "label": "贴片电阻",
+      "description": "BMI088 周围的加热电阻阵列，由 Q9 控制。",
+      "schematicPage": 2,
+      "value": "470R/0402/1%"
+    },
+    "R90": {
+      "label": "贴片电阻",
+      "description": "IMU 加热开关 Q9 的栅极串联电阻。",
+      "schematicPage": 2,
+      "value": "100R/0201/1%"
+    },
+    "R91": {
+      "label": "贴片电阻",
+      "description": "IMU 加热开关 Q9 的栅极下拉。",
+      "schematicPage": 2,
+      "value": "10K/0201/1%"
+    },
+    "R92": {
+      "label": "贴片电阻",
+      "description": "摄像头 SCL / SDA 信号上拉至 3.3 V。",
+      "schematicPage": 6,
+      "value": "10K/0201/1%"
+    },
+    "R93": {
+      "label": "贴片电阻",
+      "description": "摄像头 SCL / SDA 信号上拉至 3.3 V。",
+      "schematicPage": 6,
+      "value": "10K/0201/1%"
+    },
+    "R94": {
+      "label": "贴片电阻",
+      "description": "摄像头 PWDN 控制信号上拉至 3.3 V。",
+      "schematicPage": 6,
+      "value": "10K/0201/1%"
+    },
+    "R95": {
+      "label": "贴片电阻",
+      "description": "摄像头 RESET 信号上拉至 2.8 V。",
+      "schematicPage": 6,
+      "value": "10K/0201/1%"
+    },
+    "R96": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "R97": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "R98": {
+      "label": "贴片电阻",
+      "description": "QSPI Flash 片选上拉。",
+      "schematicPage": 1,
+      "value": "10K/0201/1%"
+    },
+    "R99": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "R101": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "R102": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "R103": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "R104": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "R105": {
+      "label": "贴片电阻",
+      "description": "24Pin 扩展接口信号串联电阻。",
+      "schematicPage": 6,
+      "value": "22R/0201/1%"
+    },
+    "SW1": {
+      "label": "USER · 用户按键",
+      "description": "PA15 用户按键。鼠标或触摸按住，或聚焦后按住空格 / Enter；松开即释放。",
+      "schematicPage": 5,
+      "value": "SKRTLAE010",
+      "component": "key"
+    },
+    "SW2": {
+      "label": "RESET · 复位按键",
+      "description": "连接 MCU_RST / NRST 的板载按键。",
+      "schematicPage": 5,
+      "value": "SKRTLAE010",
+      "component": "reset"
+    },
+    "U1": {
+      "label": "CAN1 收发器",
+      "description": "将 PD1 TX / PD0 RX 接至 CAN1_H / CAN1_L，连接 P2 与 P7。",
+      "schematicPage": 4
+    },
+    "U2": {
+      "label": "CAN1 总线保护",
+      "description": "CAN1 差分线的瞬态电压保护。",
+      "schematicPage": 4,
+      "value": "PESD1CAN"
+    },
+    "U3": {
+      "label": "CAN2 收发器",
+      "description": "将 PB6 TX / PB5 RX 接至 CAN2_H / CAN2_L，连接 P3 与 P8。",
+      "schematicPage": 4
+    },
+    "U4": {
+      "label": "CAN2 总线保护",
+      "description": "CAN2 差分线的瞬态电压保护。",
+      "schematicPage": 4,
+      "value": "PESD1CAN"
+    },
+    "U5": {
+      "label": "USART2 · RS485 收发器",
+      "description": "连接 USART2 的 PD5 TX / PD6 RX，PD4 控制方向；A2 / B2 引至 P4 与 P16。",
+      "schematicPage": 5
+    },
+    "U6": {
+      "label": "USART3 · RS485 收发器",
+      "description": "连接 USART3 的 PD8 TX / PD9 RX，PB14 控制方向；A1 / B1 引至 P5 与 P16。",
+      "schematicPage": 5
+    },
+    "U7": {
+      "label": "USB 静电保护",
+      "description": "保护 USB D+ / D− 两条数据线。",
+      "schematicPage": 2,
+      "value": "PRTR5V0U2X"
+    },
+    "U8": {
+      "label": "RS485 A2 / B2 保护",
+      "description": "USART2 对应 RS485 差分线的瞬态电压保护。",
+      "schematicPage": 5,
+      "value": "PSM712"
+    },
+    "U9": {
+      "label": "RS485 A1 / B1 保护",
+      "description": "USART3 对应 RS485 差分线的瞬态电压保护。",
+      "schematicPage": 5,
+      "value": "PSM712"
+    },
+    "U10": {
+      "label": "5 V 外供电源",
+      "description": "降压电源电路，将 VCC_IN 转换为 VCC_5V；PC15 控制使能。",
+      "schematicPage": 3
+    },
+    "U11": {
+      "label": "BL9342 · 系统 5 V 电源",
+      "description": "降压电源电路，将 VCC_IN 转换为 VCC_5VS。",
+      "schematicPage": 3,
+      "value": "BL9342"
+    },
+    "U12": {
+      "label": "系统 3.3 V 电源",
+      "description": "降压电源电路，将 VCC_5VS 转换为 VCC_3V3。",
+      "schematicPage": 3
+    },
+    "U13": {
+      "label": "SPI / I²C · 扩展接口",
+      "description": "12 针扩展接口，引出 SPI1、I²C2、PD10 与 PA5（ADC1 CH18），并提供系统 5 V 电源。",
+      "schematicPage": 5,
+      "value": "12 针",
+      "component": "lcd"
+    },
+    "U14": {
+      "label": "STM32H723VGT6",
+      "description": "Arm Cortex-M7 主控，连接存储器、惯性传感器与各组通信接口。",
+      "schematicPage": 1,
+      "value": "STM32H723VGT6",
+      "component": "mcu"
+    },
+    "U15": {
+      "label": "W25Q64JV · QSPI Flash",
+      "description": "8 MiB 串行 Flash，使用 OCTOSPI：PE11 片选、PB2 时钟，PD11 / PB0 / PA3 / PA1 数据线。",
+      "schematicPage": 1,
+      "value": "W25Q64JV",
+      "component": "flash"
+    },
+    "U16": {
+      "label": "CAN3 收发器",
+      "description": "将 PD13 TX / PD12 RX 接至 CAN3_H / CAN3_L，连接 P12 与 P16。",
+      "schematicPage": 4
+    },
+    "U17": {
+      "label": "CAN3 总线保护",
+      "description": "CAN3 差分线的瞬态电压保护。",
+      "schematicPage": 4,
+      "value": "PESD1CAN"
+    },
+    "U18": {
+      "label": "BMI088 · 六轴惯性传感器",
+      "description": "三轴加速度计与三轴陀螺仪，经 SPI2 连接；PC0 / PC3 分别片选，PE10 / PE12 引出中断。",
+      "schematicPage": 2,
+      "value": "BMI088",
+      "component": "imu"
+    },
+    "U19": {
+      "label": "摄像头 2.8 V 稳压器",
+      "description": "将 VCC_3V3 转换为 VCC_2V8，为摄像头接口供电。",
+      "schematicPage": 6
+    },
+    "U20": {
+      "label": "摄像头 1.5 V 稳压器",
+      "description": "将 VCC_3V3 转换为 VCC_1V5，为摄像头接口供电。",
+      "schematicPage": 6
+    },
+    "Y1": {
+      "label": "24 MHz 晶振",
+      "description": "连接 PH0 / PH1，为主控提供外部时钟。",
+      "schematicPage": 1,
+      "value": "24MHz"
+    }
+  }
+}

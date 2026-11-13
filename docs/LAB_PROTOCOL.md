@@ -34,7 +34,7 @@ exit before applying its own bounded process-tree termination fallback.
 
 ## Frontend assets
 
-All nine files below must be nonempty regular files within the assets directory.
+All files below must be nonempty regular files within the assets directory.
 Paths that resolve outside that directory are rejected. Files are loaded once
 before readiness; HTTP never reads a client-supplied filesystem path. Other
 files in the directory are not served.
@@ -43,12 +43,18 @@ files in the directory are not served.
 index.html
 app.js
 uart-console.js
+board-view.js
+buzzer-audio.js
+board-model.js
+board.svg
+models/dm-mc02.glb
 style.css
 vendor/mdui.js
 vendor/mdui.css
 vendor/xterm.js
 vendor/xterm.css
 vendor/addon-fit.js
+vendor/three.js
 ```
 
 `/` serves `index.html`. Existing JavaScript and stylesheet URLs remain the same.
@@ -93,6 +99,40 @@ replies carry the current session generation. After `load`, subsequent commands 
 stop the live board. Disconnect releases momentary inputs while preserving the
 Lab session; the next controller can observe and stop it. Firmware uploads are
 limited to one nonempty file of at most 64 MiB and require an inactive session.
+
+## Board interaction
+
+`key` and `reset` take `{"pressed":true}` or `{"pressed":false}`. The same
+controller owns both holds independently. Disconnect releases its inputs.
+`reset` holds NRST; release starts the CPU from its reset vector in the same
+QEMU process. Reload remains the operation that replaces the process and ELF.
+
+`pose` takes `{"orientation_xyzw":[0,0,0,1]}`. A finite nonzero quaternion is
+normalized before admission; the project must select `imu:"board_pose"`.
+New projects use this mode. Files that omit `imu` keep `stationary` behavior;
+bare `LabOptions` continues to default to `off`.
+
+The native session owns a 100 ms normalized quaternion Hermite trajectory,
+retaining orientation and angular velocity when retargeted. It samples at the
+existing QEMU virtual timestamp and sends sensor-local SI input over the shared
+IMU/ADC lane. Gravity is 9.80665 m/s²; acceleration includes the fixed sensor
+offset's tangential and centripetal terms. `state.motion` reports the same
+trajectory's quaternion, gyro rad/s, acceleration m/s² and body/view transform.
+The frontend sends at most one pose request at a time, coalesces drag targets
+at 50 ms intervals and renders returned orientation. Camera operations send
+no pose command. Pause freezes virtual time.
+
+`board.led.source` is `ws2812-din`. The board decodes the timestamped resolved
+PA7 output, with `timing_profile`, `frames`, `errors`, `latched_ns` and `powered`
+alongside the retained RGB. See [BOARD.md](../apps/lab/docs/BOARD.md) for timing.
+
+`board.buzzer` contains `generation`, `frequency_hz`, `duty_permille` and
+`events`. Each retained event has `sequence`, `timestamp_ns`, `frequency_hz`
+and `duty_permille`; zero frequency means silence. Generation, sequence and
+event nanoseconds are decimal strings. The ring retains 256 changes; readers
+deduplicate by generation/sequence. A gap stops audio and requires a new
+session. Browser audio schedules batches with 40 ms lead time, retaining short
+tone durations. Pause, stop, disconnect and stale observations cancel sound.
 
 ## Save an IDE configuration
 

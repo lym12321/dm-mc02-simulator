@@ -200,6 +200,7 @@ struct State {
     epoch: u64,
     pending_load: bool,
     key_controller: Option<String>,
+    reset_controller: Option<String>,
     stop: Option<PendingStop>,
     history: History,
     failure: Option<SessionError>,
@@ -209,6 +210,7 @@ struct SharedState {
     state: Mutex<State>,
     stop: Arc<AtomicBool>,
     release: AtomicBool,
+    release_reset: AtomicBool,
     closing: AtomicBool,
 }
 pub struct LabSession {
@@ -254,6 +256,7 @@ impl LabSession {
                 epoch: 0,
                 pending_load: false,
                 key_controller: None,
+                reset_controller: None,
                 stop: None,
                 history: History::new(),
                 failure: None,
@@ -261,6 +264,7 @@ impl LabSession {
             }),
             stop: Arc::new(AtomicBool::new(false)),
             release: AtomicBool::new(false),
+            release_reset: AtomicBool::new(false),
             closing: AtomicBool::new(false),
         });
         let (queue, commands) = mpsc::sync_channel(COMMAND_LIMIT);
@@ -550,6 +554,9 @@ impl LabSession {
         if state.key_controller.as_deref() == Some(controller) {
             self.shared.release.store(true, Ordering::Relaxed);
         }
+        if state.reset_controller.as_deref() == Some(controller) {
+            self.shared.release_reset.store(true, Ordering::Relaxed);
+        }
     }
     pub fn history(&self, after: u64) -> Vec<Value> {
         let state = self.shared.state.lock().unwrap();
@@ -622,11 +629,27 @@ fn next_command(shared: &SharedState, commands: &Receiver<Command>) -> Option<Co
         }
     }
 }
-fn key_applied(shared: &SharedState, controller: Option<String>, epoch: u64, pressed: bool) {
+fn button_applied(
+    shared: &SharedState,
+    controller: Option<String>,
+    epoch: u64,
+    reset: bool,
+    pressed: bool,
+) {
     let mut state = shared.state.lock().unwrap();
-    state.key_controller = if pressed { controller } else { None };
+    let owner = if reset {
+        &mut state.reset_controller
+    } else {
+        &mut state.key_controller
+    };
+    *owner = if pressed { controller } else { None };
     if epoch != state.epoch {
-        shared.release.store(true, Ordering::Relaxed);
+        let release = if reset {
+            &shared.release_reset
+        } else {
+            &shared.release
+        };
+        release.store(true, Ordering::Relaxed);
     }
 }
 fn finish_stop(shared: &SharedState, state: &mut State, result: Result<Value>) {
@@ -690,6 +713,7 @@ fn observe(
 ) -> sim_core::Result<()> {
     let running = lab.command(commands::query_status {})?.running;
     let remaining = lab.remaining()?.as_secs_f64();
+    let motion = lab.motion_state(snapshot["timestamp_ns"].as_u64().unwrap())?;
     let (board, pins) = super::presentation::project(snapshot)?;
     let mut state = shared.state.lock().unwrap();
     state.value["status"] = if shared.stop.load(Ordering::Relaxed) {
@@ -701,6 +725,7 @@ fn observe(
     }
     .into();
     state.value["board"] = board;
+    state.value["motion"] = motion;
     state.value["pins"] = pins;
     state.value["remaining_seconds"] = json!(remaining);
     state.value["usb"] = lab.usb_status();
@@ -818,6 +843,10 @@ fn run_session(
                         lab.inject(LabInput::Key(false))?;
                         shared.state.lock().unwrap().key_controller = None;
                     }
+                    if shared.release_reset.swap(false, Ordering::Relaxed) {
+                        lab.inject(LabInput::Reset(false))?;
+                        shared.state.lock().unwrap().reset_controller = None;
+                    }
                     let current = next_command(shared, commands);
                     let had_command = current.is_some();
                     if let Some(current) = current {
@@ -827,15 +856,21 @@ fn run_session(
                             )) as Failure),
                             Action::Board(command) => {
                                 let pressed = match &command {
-                                    BoardCommand::Input(LabInput::Key(value)) => Some(*value),
+                                    BoardCommand::Input(LabInput::Key(value)) => {
+                                        Some((false, *value))
+                                    }
+                                    BoardCommand::Input(LabInput::Reset(value)) => {
+                                        Some((true, *value))
+                                    }
                                     _ => None,
                                 };
                                 lab.apply(command).inspect(|_| {
-                                    if let Some(pressed) = pressed {
-                                        key_applied(
+                                    if let Some((reset, pressed)) = pressed {
+                                        button_applied(
                                             shared,
                                             current.controller,
                                             current.epoch,
+                                            reset,
                                             pressed,
                                         );
                                     }
@@ -938,7 +973,9 @@ fn finish_session(
     cancel_pending(commands);
     state.pending_load = false;
     state.key_controller = None;
+    state.reset_controller = None;
     shared.release.store(false, Ordering::Relaxed);
+    shared.release_reset.store(false, Ordering::Relaxed);
     let result = match result {
         Err(error)
             if !error.cleanup_failed
@@ -1016,6 +1053,7 @@ mod tests {
                 epoch: 0,
                 pending_load: false,
                 key_controller: None,
+                reset_controller: None,
                 stop: None,
                 history: History::new(),
                 failure: None,
@@ -1023,6 +1061,7 @@ mod tests {
             }),
             stop: Arc::new(AtomicBool::new(false)),
             release: AtomicBool::new(false),
+            release_reset: AtomicBool::new(false),
             closing: AtomicBool::new(false),
         });
         let (queue, commands) = mpsc::sync_channel(capacity);
@@ -1048,8 +1087,18 @@ mod tests {
             panic!()
         };
         assert_eq!(data, [0, 255]);
+        let Action::Board(BoardCommand::Input(LabInput::Pose(orientation))) =
+            admit_action("pose", &json!({"orientation_xyzw":[0,0,0,2]})).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(orientation, [0.0, 0.0, 0.0, 1.0]);
         for (action, value) in [
             ("key", json!({"pressed":1})),
+            ("reset", json!({"pressed":1})),
+            ("pose", json!({"orientation_xyzw":[0,0,0,0]})),
+            ("pose", json!({"orientation_xyzw":[0,0,1]})),
+            ("pose", json!({"orientation_xyzw":[0,0,0,1],"time":0})),
             ("gpio", json!({"pin":"B0","level":true})),
             ("adc", json!({"channel":0,"raw":1,"voltage_uv":2})),
             (
@@ -1353,7 +1402,13 @@ mod tests {
         // notify the owner's next release turn, even if its waiter vanished.
         assert!(!session.shared.release.swap(false, Ordering::Relaxed));
         drop(reply);
-        key_applied(&session.shared, command.controller, command.epoch, true);
+        button_applied(
+            &session.shared,
+            command.controller,
+            command.epoch,
+            false,
+            true,
+        );
         assert!(session.shared.release.swap(false, Ordering::Relaxed));
     }
 }

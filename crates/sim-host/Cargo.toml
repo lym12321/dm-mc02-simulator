@@ -22,7 +22,7 @@ host-processes = ["simulation", "native-process"]
 socketcan = ["simulation", "dep:socketcan"]
 trace = ["dep:mcap", "dep:binrw"]
 machine = ["simulation", "boards", "qmp", "native-process", "cosim-wire"]
-lab = ["boards", "qmp", "native-process", "cosim-wire", "dep:signal-hook", "dep:object"]
+lab = ["boards", "qmp", "native-process", "cosim-wire", "dep:signal-hook", "dep:object", "dep:glam"]
 lab-session = ["lab", "dep:uuid", "dep:base64", "dep:sha2"]
 desktop-backend = ["lab-session", "dep:axum", "dep:rfd", "tokio/sync", "tokio/fs"]
 worker = ["simulation", "physics", "cosim-wire", "native-process", "dep:tokio", "dep:signal-hook", "dep:roxmltree", "dep:sha2"]
@@ -122,6 +122,7 @@ axum = { version = "=0.8.9", default-features = false, features = ["http1", "jso
 roxmltree = { version = "=0.21.1", optional = true }
 sha2 = { version = "=0.10.9", optional = true }
 object = { version = "=0.37.3", default-features = false, features = ["read_core", "elf", "std"], optional = true }
+glam = { version = "=0.30.9", optional = true }
 rfd = { version = "=0.15.4", default-features = false, features = ["xdg-portal", "tokio"], optional = true }
 
 [target.'cfg(unix)'.dependencies]

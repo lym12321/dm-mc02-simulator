@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1120 800" role="img" aria-labelledby="board-art-title">
+  <title id="board-art-title">DM-MC02 正面俯视图</title>
+  <desc>原创板卡绘图，布局参考达妙 DM-MC-Board02 使用说明书 V1.1 附录。USB 朝上，电源入口朝左。交互和观测由独立页面控件提供。</desc>
+  <!-- Reference facts: https://gitee.com/kit-miao/dm-mc02/tree/0ad8a919495c6da38f36b9352ca1118e490ef4c2
+       V1.1 manual (2025-07-23), appendix p15; blob 0d077247714b316d806692df125a6db409d463d1.
+       Original drawing; no vendor image/CAD embedded. See apps/lab/docs/BOARD.md. -->
+  <defs>
+    <linearGradient id="pcb" x2="1" y2="1"><stop stop-color="#29312e"/><stop offset=".6" stop-color="#1d2422"/><stop offset="1" stop-color="#303632"/></linearGradient>
+    <linearGradient id="ceramic" x2=".2" y2="1"><stop stop-color="#fffdf0"/><stop offset=".6" stop-color="#dedaca"/><stop offset="1" stop-color="#afad9f"/></linearGradient>
+    <linearGradient id="metal" x2=".3" y2="1"><stop stop-color="#f1f3f0"/><stop offset=".3" stop-color="#a5aca9"/><stop offset=".55" stop-color="#dde1db"/><stop offset="1" stop-color="#777e7a"/></linearGradient>
+    <linearGradient id="gold" x2="1" y2="1"><stop stop-color="#e2ce83"/><stop offset=".5" stop-color="#bba255"/><stop offset="1" stop-color="#766535"/></linearGradient>
+    <linearGradient id="package" x2=".4" y2="1"><stop stop-color="#3e4140"/><stop offset=".12" stop-color="#262a29"/><stop offset="1" stop-color="#161b1a"/></linearGradient>
+    <linearGradient id="yellow" x2=".2" y2="1"><stop stop-color="#f4db47"/><stop offset=".7" stop-color="#d5b627"/><stop offset="1" stop-color="#a78c1c"/></linearGradient>
+    <pattern id="ic-pins-x" width="8" height="18" patternUnits="userSpaceOnUse"><rect x="2" width="4" height="18" rx="1" fill="url(#metal)"/><path d="M2 6h4M2 13h4" stroke="#777b72" stroke-width=".6"/></pattern>
+    <pattern id="ic-pins-y" width="18" height="8" patternUnits="userSpaceOnUse"><rect y="2" width="18" height="4" rx="1" fill="url(#metal)"/><path d="M6 2v4M13 2v4" stroke="#777b72" stroke-width=".6"/></pattern>
+    <pattern id="header-pins" width="22" height="22" patternUnits="userSpaceOnUse"><rect x="5" y="5" width="12" height="12" rx="1" fill="#171c1b"/><rect x="9" y="8" width="5" height="6" fill="url(#gold)"/></pattern>
+    <filter id="board-shadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-opacity=".22"/></filter>
+    <filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+    <mask id="board-outline"><rect x="10" y="10" width="1100" height="780" rx="20" fill="white"/>
+      <path d="M512 800V687Q512 670 529 670h32M699 800V687Q699 670 682 670h-31" fill="none" stroke="black" stroke-width="16" stroke-linecap="round"/>
+      <g fill="black"><circle cx="358" cy="49" r="18"/><circle cx="1058" cy="49" r="18"/><circle cx="358" cy="750" r="18"/><circle cx="1058" cy="750" r="18"/></g>
+    </mask>
+    <g id="mount"><circle r="27" fill="url(#gold)"/><circle r="18" fill="#e4e8e3"/><circle r="18" fill="none" stroke="#0e1612" stroke-width="3"/><path d="M-24-6a25 25 0 0 1 30-18" fill="none" stroke="#e4d48d" stroke-width="2"/></g>
+    <g id="resistor"><rect width="27" height="12" rx="2" fill="url(#metal)"/><rect x="6" y="1" width="15" height="10" rx="1" fill="#171b1b"/><path d="M11 4h6M11 7h6" stroke="#9ca09a" stroke-width=".7"/></g>
+    <g id="capacitor"><rect width="24" height="12" rx="2" fill="url(#metal)"/><rect x="5" y="1" width="14" height="10" rx="1" fill="#aa9070"/></g>
+    <g id="small-ic"><path d="M6-4v36M16-4v36M26-4v36" stroke="url(#metal)" stroke-width="5"/><rect width="32" height="28" rx="2" fill="url(#package)" stroke="#696e67"/><circle cx="5" cy="5" r="1.4" fill="#73786e"/></g>
+    <g id="socket-2"><rect width="108" height="78" rx="3" fill="#111715"/><rect x="2" y="2" width="104" height="71" rx="2" fill="url(#ceramic)" stroke="#999c8e"/><path d="M13 12h82v46H13z" fill="#333a34"/><path d="M19 17h70v34H19z" fill="#151f1a"/><path d="M10 7h88v12H10zM6 40h9v25H6zM93 40h9v25h-9z" fill="#f0eedc"/><path d="M39 29v26M67 29v26" stroke="url(#metal)" stroke-width="5"/><path d="M39 77v12M67 77v12" stroke="url(#gold)" stroke-width="4"/></g>
+    <g id="socket-4"><rect width="82" height="145" rx="3" fill="#111715"/><rect x="2" y="2" width="78" height="139" rx="2" fill="url(#ceramic)" stroke="#999c8e"/><path d="M14 16h51v110H14z" fill="#1a211c"/><path d="M17 21h42v100H17z" fill="#101813"/><path d="M10 8h60v10H10zM10 125h60v10H10zM64 41h11v56H64z" fill="#f3f0df"/><path d="M23 36h30M23 63h30M23 90h30M23 117h30" stroke="url(#metal)" stroke-width="5"/><path d="M31 29h19M31 56h19M31 83h19M31 110h19" stroke="#77837a" stroke-width="2"/></g>
+    <g id="xt30"><rect width="190" height="94" rx="4" fill="#111614" stroke="#858d77" stroke-width="2"/><path d="M8 8h160l14 14v62H8z" fill="#323932" stroke="#4e554a" stroke-width="2"/><path d="M19 18h143l10 10v46H19z" fill="#0c120f"/><circle cx="56" cy="47" r="21" fill="url(#gold)"/><circle cx="137" cy="47" r="21" fill="url(#gold)"/><path d="M38 47h36M56 29v36M119 47h36M137 29v36" stroke="#514820" stroke-width="5"/><path d="M90 72h17v18H90z" fill="#4a5147"/></g>
+    <g id="can-pair"><rect width="54" height="94" rx="2" fill="#141b17" stroke="#858d77" stroke-width="2"/><path d="M8 7h38v80H8z" fill="#354035"/><rect x="17" y="19" width="20" height="20" fill="#151c16"/><rect x="17" y="58" width="20" height="20" fill="#151c16"/><path d="M24 23h6v12h-6zM24 62h6v12h-6z" fill="url(#gold)"/></g>
+    <g id="button"><rect width="90" height="54" rx="4" fill="#0e1412" stroke="#8d958b"/><path d="M8-5v64M82-5v64" stroke="url(#metal)" stroke-width="6"/><rect x="5" y="5" width="80" height="41" rx="4" fill="url(#metal)"/><rect x="13" y="9" width="64" height="31" rx="3" fill="#303733"/><rect x="32" y="41" width="27" height="16" rx="2" fill="#a5aaa0"/></g>
+  </defs>
+  <g filter="url(#board-shadow)"><rect x="10" y="10" width="1100" height="780" rx="20" fill="url(#pcb)" stroke="#6b735e" stroke-width="3" mask="url(#board-outline)"/></g>
+  <!-- Low-contrast routing is decorative; no electrical state is inferred here. -->
+  <g fill="none" stroke="#5b6552" stroke-width="1.2" opacity=".28">
+    <path d="M165 230h93l34 34h97l40 40v113h109M164 610h94l27-27v-97h122l44-44h86M401 70v65l39 39v83h106l26 26M907 188h-34l-40 40H585l-25-25h-85M924 380h-27v172l-29 29H685M739 552v29l-42 42h-75v51M875 552v55l39 39v48M272 470h-30v-99h56M295 714h-39V602M531 658h38v-51h42M1022 146v-28h-70M479 285v-55h54M1054 650v30H941v45"/>
+    <path d="M172 242h79l35 35h91l40 40v109h121M401 80h-10v60l38 38v91h114l20 20M916 393v165l-38 37H692M885 560v44l39 39v61M539 653h39v-39h36"/>
+  </g>
+  <g><use xlink:href="#mount" x="358" y="49"/><use xlink:href="#mount" x="1058" y="49"/><use xlink:href="#mount" x="358" y="750"/><use xlink:href="#mount" x="1058" y="750"/></g>
+  <g fill="#d7d8c4" font-family="Arial, sans-serif" font-size="11" letter-spacing=".7">
+    <text x="893" y="202" transform="rotate(-90 893 202)">DM MC 02 · REV V1.0</text>
+    <text x="928" y="196" transform="rotate(-90 928 196)" font-size="18">达妙科技</text>
+    <text x="32" y="137" font-size="19">+</text><text x="32" y="668" font-size="19">+</text>
+    <text x="375" y="277">UART7</text><text x="321" y="691">CAN3</text><text x="440" y="691">UART10</text>
+    <text x="613" y="178" font-size="10" transform="rotate(-90 613 178)">BOOT0</text><text x="954" y="114">USART1</text>
+    <text x="617" y="114">USART2-485</text><text x="748" y="114">USART3-485</text>
+    <text x="34" y="256">CAN1</text><text x="34" y="634">CAN2</text>
+    <text x="707" y="706">USER</text><text x="414" y="706">RESET</text>
+    <text x="884" y="714">SWDIO CLK GND 3V3</text>
+    <text x="552" y="685">IMU</text><text x="559" y="777">X →   Y ↑</text>
+    <text x="941" y="444">RGB</text><text x="1022" y="387">LCD</text>
+    <text x="1032" y="111">5V EN</text>
+    <text x="934" y="355">SBUS</text><text x="955" y="128">S   5V   G</text>
+    <text x="478" y="271">EXPANSION</text><text x="303" y="430">QSPI FLASH</text>
+  </g>
+  <g fill="#dfdfcc" opacity=".8" stroke="#dfdfcc" stroke-width="1" fill-opacity="0">
+    <rect x="21" y="18" width="264" height="100" rx="2"/><rect x="21" y="681" width="264" height="100" rx="2"/>
+    <rect x="301" y="296" width="104" height="126"/><rect x="573" y="251" width="316" height="304"/>
+    <path d="M584 563h-14v-14M554 694h99v71h-99M422 276h113v239H422"/>
+  </g>
+  <g data-component="out1" data-label="CAN1 · 可控电源接口" data-kind="can" data-endpoint="can1" data-pins="C14">
+    <desc>XT30 2+2 引出 OUT1 电源与 CAN1_H / CAN1_L，PC14 控制电源使能。</desc>
+    <use xlink:href="#xt30" x="26" y="21"/><use xlink:href="#can-pair" x="223" y="21"/>
+  </g>
+  <g data-component="out2" data-label="CAN2 · 可控电源接口" data-kind="can" data-endpoint="can2" data-pins="C13">
+    <desc>XT30 2+2 引出 OUT2 电源与 CAN2_H / CAN2_L，PC13 控制电源使能。</desc>
+    <use xlink:href="#xt30" x="26" y="684"/><use xlink:href="#can-pair" x="223" y="684"/>
+  </g>
+  <g data-component="can1" data-kind="can" data-endpoint="can1" data-pins="D0 D1" data-label="CAN1" data-ref="P2" data-value="SM02B-GHS" data-schematic-page="4"><desc>CAN1_H / CAN1_L 信号接口，与对应 XT30 2+2 插口共用总线。</desc><use xlink:href="#socket-2" transform="translate(30 153) rotate(90 54 39)"/></g>
+  <g data-component="can2" data-kind="can" data-endpoint="can2" data-pins="B5 B6" data-label="CAN2" data-ref="P3" data-value="SM02B-GHS" data-schematic-page="4"><desc>CAN2_H / CAN2_L 信号接口，与对应 XT30 2+2 插口共用总线。</desc><use xlink:href="#socket-2" transform="translate(30 536) rotate(90 54 39)"/></g>
+  <g data-component="vin" data-kind="vin" data-label="VIN · 电源输入" data-ref="P9"><desc>XT30 板卡电源输入接口。</desc>
+    <path d="M159 337h86v20h-86M159 440h86v20h-86" stroke="#161d16" stroke-width="13"/>
+    <rect x="159" y="335" width="91" height="22" rx="10" fill="url(#gold)"/><rect x="159" y="439" width="91" height="22" rx="10" fill="url(#gold)"/>
+    <rect x="22" y="303" width="165" height="192" rx="6" fill="url(#yellow)" stroke="#9f8b30" stroke-width="3"/>
+    <path d="M22 314h31v170H22zM158 309h22v179h-22z" fill="#ead03d"/><path d="M65 315h83v167H65z" fill="#c7a926" stroke="#efd74f"/>
+    <text x="118" y="352" fill="#9d841f" font-family="Arial" font-size="22" transform="rotate(90 118 352)">AMASS</text>
+    <text x="224" y="330" fill="#dddcca" font-family="Arial" font-size="13">−</text><text x="224" y="480" fill="#dddcca" font-family="Arial" font-size="16">+</text>
+  </g>
+  <g data-component="usb" data-kind="usb" data-pins="A11 A12" data-label="USB · Type-C" data-ref="J1" data-value="TYPE-C 16" data-schematic-page="2"><desc>USB 全速数据接口，D+ / D− 连接 PA12 / PA11，VBUS 接入板卡供电。</desc>
+    <rect x="415" y="18" width="172" height="145" rx="5" fill="#101816"/>
+    <path d="M421 16h160v134H421z" fill="url(#metal)" stroke="#858f86" stroke-width="2"/>
+    <path d="M426 23h150M426 31h150M428 143h144" stroke="#f5f6ee" stroke-width="2"/>
+    <path d="M444 100h21v18h-21zM537 100h21v18h-21z" fill="#4c5850"/><path d="M447 102h15v11h-15zM540 102h15v11h-15z" fill="#aab7ab"/>
+    <path d="M426 153h150" stroke="#1a231c" stroke-width="8"/><path d="M436 157h130" stroke="url(#gold)" stroke-width="4"/>
+  </g>
+  <g data-component="uart2" data-kind="uart" data-endpoint="uart2" data-pins="D5 D6 D4" data-label="USART2 · RS485" data-ref="P4" data-value="SM02B-GHS" data-schematic-page="5"><desc>RS485 A2 / B2 信号接口，PD4 控制收发方向。</desc><use xlink:href="#socket-2" x="615" y="20"/></g>
+  <g data-component="uart3" data-kind="uart" data-endpoint="uart3" data-pins="D8 D9 B14" data-label="USART3 · RS485" data-ref="P5" data-value="SM02B-GHS" data-schematic-page="5"><desc>RS485 A1 / B1 信号接口，PB14 控制收发方向。</desc><use xlink:href="#socket-2" x="747" y="20"/></g>
+  <g data-component="uart1" data-kind="uart" data-endpoint="uart1" data-pins="A9 A10" data-label="USART1" data-ref="P10" data-value="SM03B-GH" data-schematic-page="2"><desc>TTL 串口接口，PA9 TX / PA10 RX 与 GND。</desc><use xlink:href="#socket-2" transform="translate(880 20) scale(1.15 1)"/></g>
+  <g data-component="uart7" data-kind="uart" data-endpoint="uart7" data-pins="E8 E7" data-label="UART7" data-ref="P13" data-value="A1257wv-s-4P" data-schematic-page="2"><desc>四针接口，引出 PE8 TX / PE7 RX、5 V 与 GND。</desc><use xlink:href="#socket-4" x="323" y="106"/></g>
+  <g data-component="can3" data-kind="can" data-endpoint="can3" data-pins="D12 D13" data-label="CAN3" data-ref="P12" data-value="A1257wv-s-4P" data-schematic-page="4"><desc>引出 CAN3_H / CAN3_L 与供电，和 P16 扩展口共用 CAN3 总线。</desc><use xlink:href="#socket-4" x="323" y="534"/></g>
+  <g data-component="uart10" data-kind="uart" data-endpoint="uart10" data-pins="E3 E2" data-label="USART10" data-ref="P15" data-value="A1257wv-s-4P" data-schematic-page="2"><desc>四针接口，引出 PE3 TX / PE2 RX、5 V 与 GND。</desc><use xlink:href="#socket-4" x="429" y="534"/></g>
+  <g data-component="mcu" data-pins="" data-label="STM32H723VGT6" data-ref="U14" data-value="STM32H723VGT6" data-schematic-page="1"><desc>Arm Cortex-M7 主控，连接存储器、惯性传感器与各组通信接口。</desc>
+    <rect x="611" y="242" width="244" height="326" fill="url(#ic-pins-x)"/><rect x="580" y="274" width="306" height="260" fill="url(#ic-pins-y)"/>
+    <rect x="599" y="260" width="269" height="289" rx="5" fill="url(#package)" stroke="#101614" stroke-width="3"/>
+    <path d="M606 266h254v274H606z" fill="none" stroke="#51584f" stroke-width="1"/>
+    <circle cx="616" cy="530" r="5" fill="#6b7265"/>
+    <g fill="#899083" font-family="Arial, sans-serif" letter-spacing="1"><text x="632" y="361" font-size="18">STM32H723</text><text x="632" y="387" font-size="15">VGT6</text><text x="632" y="432" font-size="11">ARM  CORTEX-M7</text><text x="632" y="451" font-size="10">ST</text></g>
+  </g>
+  <g data-component="flash" data-label="W25Q64JV · QSPI Flash" data-ref="U15" data-value="W25Q64JV" data-schematic-page="1"><desc>8 MiB 串行 Flash，使用 OCTOSPI：PE11 片选、PB2 时钟，PD11 / PB0 / PA3 / PA1 数据线。</desc>
+    <rect x="308" y="301" width="95" height="110" rx="3" fill="url(#package)" stroke="#6f776b"/><path d="M316 297v-6M337 297v-6M359 297v-6M381 297v-6M316 414v6M337 414v6M359 414v6M381 414v6" stroke="url(#metal)" stroke-width="6"/>
+    <text x="322" y="354" fill="#8f9587" font-family="Arial" font-size="10">WINBOND</text><text x="322" y="371" fill="#8f9587" font-family="Arial" font-size="10">25Q64JV</text><circle cx="318" cy="398" r="3" fill="#7c8276"/>
+  </g>
+  <g data-component="expansion" data-pins="D15 D14 E14 E0 E1 C12 C11 C10 B8 B9" data-label="24Pin · 扩展接口" data-ref="P16" data-value="SGDBF-08-024P-H35" data-schematic-page="6"><desc>引出 UART8/9、SPI3、I²C、CAN3、两组 RS485、PE14，以及输入电源、5 V、3.3 V 与 GND。</desc>
+    <rect x="448" y="286" width="87" height="224" rx="3" fill="#101613" stroke="#6e7766"/>
+    <rect x="457" y="297" width="69" height="203" fill="#323b30"/><rect x="461" y="301" width="61" height="196" fill="url(#header-pins)"/>
+    <path d="M449 383h9v25h-9M526 383h9v25h-9" fill="#49503f"/>
+  </g>
+  <g data-component="pwm" data-pins="E13 E9 A2 A0" data-label="PWM · 四路扩展" data-ref="P11" data-value="4 × 3 排针" data-schematic-page="2"><desc>4 × 3 排针引出 PA0 / TIM2_CH1、PA2 / TIM2_CH3、PE9 / TIM1_CH1、PE13 / TIM1_CH3，以及 5 V 和 GND。</desc>
+    <rect x="951" y="135" width="144" height="186" rx="3" fill="#191f1b"/>
+    <rect x="953" y="137" width="43" height="182" fill="#326194"/><rect x="1000" y="137" width="43" height="182" fill="#8d4544"/><rect x="1047" y="137" width="45" height="182" fill="#303831"/>
+    <g fill="url(#gold)" stroke="#66582f" stroke-width="2"><path d="M966 150h13v13h-13zM1013 150h13v13h-13zM1061 150h13v13h-13zM966 196h13v13h-13zM1013 196h13v13h-13zM1061 196h13v13h-13zM966 242h13v13h-13zM1013 242h13v13h-13zM1061 242h13v13h-13zM966 288h13v13h-13zM1013 288h13v13h-13zM1061 288h13v13h-13z"/></g>
+    <path d="M951 181h144M951 227h144M951 273h144" stroke="#1b241f" stroke-width="3"/>
+  </g>
+  <g data-component="uart5" data-kind="uart" data-endpoint="uart5" data-pins="D2" data-label="SBUS · UART5 RX" data-ref="P6" data-value="P3*2.54" data-schematic-page="5"><desc>三针接收机接口，信号经 Q1 整形后连接 PD2 / UART5_RX。</desc>
+    <rect x="951" y="327" width="144" height="31" rx="3" fill="#161c19" stroke="#69705f"/>
+    <path d="M966 338h13v13h-13zM1013 338h13v13h-13zM1061 338h13v13h-13z" fill="url(#gold)"/>
+  </g>
+  <g data-component="lcd" data-kind="adc" data-pins="E15 B3 B4 D7 B10 B11 D10 A5" data-label="SPI / I²C · 扩展接口" data-ref="U13" data-value="12 针" data-schematic-page="5"><desc>12 针扩展接口，引出 SPI1、I²C2、PD10 与 PA5（ADC1 CH18），并提供系统 5 V 电源。</desc>
+    <rect x="1014" y="399" width="81" height="289" rx="3" fill="url(#ceramic)" stroke="#929a8a"/>
+    <rect x="1027" y="415" width="52" height="256" fill="#18231b"/><rect x="1034" y="422" width="39" height="242" fill="url(#header-pins)"/>
+    <path d="M1017 406h73v10h-73M1017 670h73v10h-73" stroke="#f7f2e2" stroke-width="4"/>
+  </g>
+  <g data-component="led" data-kind="led" data-pins="A7" data-label="WS2812B · RGB 指示灯" data-ref="LED3" data-value="WS2812B-3528" data-schematic-page="1"><desc>PA7 驱动的 RGB 指示灯，使用 VCC_5VS 供电。</desc>
+    <rect x="930" y="401" width="50" height="39" rx="3" fill="url(#metal)"/><rect x="934" y="404" width="42" height="33" rx="2" fill="#c1c2a1"/>
+    <circle data-led-glow="" cx="955" cy="420" r="20" fill="none" opacity=".6" filter="url(#led-glow)"/>
+    <circle data-led-core="" cx="955" cy="420" r="13" fill="#777e6c" stroke="#9b9f83"/>
+  </g>
+  <g data-component="buzzer" data-pins="B15" data-label="蜂鸣器" data-ref="BUZZER1" data-value="MLT-5020" data-schematic-page="2"><desc>MLT-5020 蜂鸣器，经 Q2 驱动，控制信号为 PB15 / TIM12_CH2。</desc>
+    <path d="M767 590h76l18 18v57l-18 20h-76z" fill="url(#package)" stroke="#838d7c" stroke-width="2"/>
+    <circle cx="785" cy="609" r="7" fill="#4b5346"/><circle cx="837" cy="655" r="6" fill="#0e1511"/><path d="M773 596h63" stroke="#5c6459"/>
+  </g>
+  <g data-component="imu" data-label="BMI088 · 六轴惯性传感器" data-ref="U18" data-value="BMI088" data-schematic-page="2"><desc>三轴加速度计与三轴陀螺仪，经 SPI2 连接；PC0 / PC3 分别片选，PE10 / PE12 引出中断。</desc>
+    <rect x="563" y="704" width="83" height="53" rx="2" fill="url(#package)" stroke="#90977f"/>
+    <text x="573" y="727" fill="#a8ac99" font-family="Arial" font-size="12">BMI088</text><text x="574" y="744" fill="#858e79" font-family="Arial" font-size="9">BOSCH</text><circle cx="569" cy="750" r="2" fill="#c0c6a4"/>
+  </g>
+  <g data-component="reset" data-label="RESET · 复位按键" data-kind="reset" data-ref="SW2" data-value="SKRTLAE010" data-schematic-page="5"><desc>按住保持 MCU 复位，松开后启动。</desc><use xlink:href="#button" x="414" y="716"/></g>
+  <g data-component="key" data-kind="key" data-pins="A15" data-label="USER · 用户按键" data-ref="SW1" data-value="SKRTLAE010" data-schematic-page="5"><desc>PA15 用户按键。鼠标或触摸按住，或聚焦后按住空格 / Enter；松开即释放。</desc><use xlink:href="#button" x="716" y="716"/></g>
+  <g data-component="swd" data-pins="A13 A14" data-label="SWD · 调试接口" data-ref="P1" data-value="53261-0471" data-schematic-page="1"><desc>引出 SWCLK（PA14）、SWDIO（PA13）、3.3 V 与 GND。</desc>
+    <g transform="translate(836 725)"><rect width="154" height="55" rx="3" fill="url(#ceramic)" stroke="#9b9f8b"/><rect x="14" y="12" width="126" height="31" fill="#1a241c"/><path d="M27 16v22M60 16v22M93 16v22M126 16v22" stroke="url(#metal)" stroke-width="5"/><path d="M4 28h13v20H4M137 28h13v20h-13" fill="#f6efdd"/></g>
+  </g>
+  <g data-component="boot" data-label="BOOT0 · 焊盘"><desc>BOOT0 启动配置焊盘，通过短接选择启动方式。</desc><circle cx="632" cy="160" r="7" fill="url(#gold)"/><circle cx="632" cy="194" r="7" fill="url(#gold)"/><circle cx="632" cy="160" r="4" fill="#1a241c"/><circle cx="632" cy="194" r="4" fill="#1a241c"/></g>
+  <!-- Surface-mount packages and passive networks, drawn as fixed physical details. -->
+  <g>
+    <use xlink:href="#small-ic" x="217" y="135"/><use xlink:href="#small-ic" x="217" y="636"/>
+    <use xlink:href="#small-ic" x="432" y="210"/><use xlink:href="#small-ic" x="492" y="215"/>
+    <use xlink:href="#small-ic" transform="translate(675 151) scale(1 1.8)"/><use xlink:href="#small-ic" transform="translate(805 151) scale(1 1.8)"/>
+    <use xlink:href="#small-ic" x="294" y="478"/><use xlink:href="#small-ic" x="386" y="454"/>
+    <use xlink:href="#small-ic" transform="translate(629 592) scale(.8 1.9)"/>
+    <rect x="167" y="178" width="62" height="91" rx="2" fill="url(#package)" stroke="#626d5c"/>
+    <rect x="167" y="534" width="62" height="88" rx="2" fill="url(#package)" stroke="#626d5c"/>
+    <rect x="695" y="592" width="59" height="48" rx="7" fill="url(#metal)" stroke="#777e6d" stroke-width="3"/><rect x="701" y="598" width="47" height="36" rx="4" fill="#bec7b8"/><text x="706" y="619" fill="#687362" font-family="Arial" font-size="10">24.000</text>
+    <use xlink:href="#resistor" x="190" y="277"/><use xlink:href="#resistor" x="171" y="501"/>
+    <use xlink:href="#capacitor" x="72" y="129"/><use xlink:href="#capacitor" x="145" y="129"/><use xlink:href="#capacitor" x="145" y="153"/>
+    <use xlink:href="#capacitor" x="72" y="652"/><use xlink:href="#capacitor" x="145" y="626"/><use xlink:href="#capacitor" x="145" y="652"/>
+    <use xlink:href="#capacitor" x="418" y="192"/><use xlink:href="#capacitor" x="418" y="238"/><use xlink:href="#capacitor" x="531" y="204"/>
+    <use xlink:href="#capacitor" x="312" y="442"/><use xlink:href="#capacitor" x="354" y="442"/><use xlink:href="#resistor" x="345" y="480"/>
+    <use xlink:href="#resistor" x="320" y="514"/><use xlink:href="#capacitor" x="370" y="515"/>
+    <use xlink:href="#resistor" x="541" y="682"/><use xlink:href="#resistor" x="611" y="683"/><use xlink:href="#capacitor" transform="translate(548 714) rotate(90)"/><use xlink:href="#capacitor" transform="translate(671 713) rotate(90)"/>
+    <use xlink:href="#resistor" x="550" y="768"/><use xlink:href="#resistor" x="605" y="768"/>
+    <use xlink:href="#capacitor" x="877" y="600"/><use xlink:href="#resistor" x="881" y="628"/><use xlink:href="#resistor" x="846" y="687"/>
+    <use xlink:href="#capacitor" x="935" y="472"/><use xlink:href="#capacitor" x="935" y="503"/><use xlink:href="#capacitor" x="935" y="534"/><use xlink:href="#capacitor" x="935" y="565"/><use xlink:href="#capacitor" x="935" y="596"/><use xlink:href="#capacitor" x="935" y="627"/><use xlink:href="#capacitor" x="935" y="658"/>
+    <use xlink:href="#resistor" x="910" y="149"/><use xlink:href="#resistor" x="910" y="195"/><use xlink:href="#resistor" x="910" y="241"/><use xlink:href="#resistor" x="910" y="287"/>
+    <g fill="#798469"><circle cx="286" cy="186" r="2"/><circle cx="286" cy="236" r="2"/><circle cx="266" cy="511" r="2"/><circle cx="575" cy="590" r="2"/><circle cx="883" cy="217" r="2"/><circle cx="420" cy="445" r="2"/><circle cx="649" cy="577" r="2"/></g>
+    <g fill="#6f3934" stroke="#9c8970" stroke-width="1"><rect x="55" y="131" width="13" height="9" rx="2"/><rect x="55" y="653" width="13" height="9" rx="2"/><rect x="1016" y="103" width="13" height="9" rx="2"/></g>
+  </g>
+</svg>

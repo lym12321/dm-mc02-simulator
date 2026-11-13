@@ -12,6 +12,18 @@ fn state_error(message: impl Into<String>) -> Failure {
 use serde_json::Value;
 use sim_core::Result;
 
+/// DM-MC02 CAD body axes: +X right, +Y up in top view, +Z component side.
+/// U18's pin-1 mark is upper-left in the CAD top view. Bosch DS000-19 Fig.12
+/// therefore maps sensor +X to body +Y and sensor +Y to body -X.
+#[cfg(feature = "lab")]
+pub fn dm_mc02_pose() -> Result<crate::lab::pose::BoardPose> {
+    use std::f64::consts::FRAC_1_SQRT_2;
+    crate::lab::pose::BoardPose::new(
+        [0.0, 0.0, FRAC_1_SQRT_2, FRAC_1_SQRT_2],
+        [0.002528006554, -0.017035006523, 0.001436120596],
+    )
+}
+
 pub fn gpio_pin(pin: &str) -> Result<(&str, u32)> {
     let bytes = pin.as_bytes();
     if bytes.len() < 2 || !matches!(bytes[0], b'A'..=b'H') {
@@ -70,7 +82,7 @@ pub fn validate_snapshot(state: &Value) -> Result<()> {
     uint(&state["led"]["brightness"], 0xff, "led.brightness")?;
     if !matches!(
         state["led"]["source"].as_str(),
-        Some("ws2812-dma" | "gpio-latch")
+        Some("ws2812-din" | "ws2812-dma" | "gpio-latch")
     ) {
         return Err(state_error("unsupported led.source"));
     }

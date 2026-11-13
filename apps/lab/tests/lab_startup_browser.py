@@ -131,6 +131,7 @@ def main():
                     # Hold real native acquisition, rather than fabricating a
                     # slow state frame. Feedback and Stop must change in the
                     # same click task before the server publishes starting.
+                    page.locator('#channel-tabs mdui-tab[value="uart"]').click()
                     immediate = page.evaluate("""() => {
                         const primary = document.querySelector('#primary-button');
                         for (let i=0;i<4;i++) primary.shadowRoot.querySelector('button').click();

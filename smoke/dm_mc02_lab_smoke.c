@@ -71,6 +71,35 @@ static void uart_decimal(uint32_t value)
     uart_char('\n');
 }
 
+/* SPI1 MOSI PA7, 4 MHz: five SPI bits encode one WS2812 GRB bit.
+ * 11000 gives H500/L750ns, 11100 gives H750/L500ns. The zero suffix
+ * supplies the 50us reset interval. DMA1 stream3 reads real AXI SRAM. */
+static void led_color(uint32_t rgb)
+{
+    volatile uint8_t *bytes = (volatile uint8_t *)0x24001000u;
+    uint32_t grb = ((rgb & 0xff00u) << 8) | ((rgb >> 8) & 0xff00u) | (rgb & 0xffu);
+    for (unsigned i = 0; i < 40; ++i) { bytes[i] = 0; }
+    for (unsigned i = 0; i < 24; ++i) {
+        unsigned symbol = (grb & (1u << (23 - i))) ? 28u : 24u;
+        for (unsigned j = 0; j < 5; ++j) {
+            unsigned bit = i * 5 + j;
+            bytes[bit / 8] |= ((symbol >> (4 - j)) & 1u) << (7 - bit % 8);
+        }
+    }
+    REG32(0x40013000u) = 0; /* Disable between transactions. */
+    REG32(0x40013018u) = 0xffffffffu;
+    REG32(0x40013004u) = 40;
+    REG32(0x40020058u) = 0;
+    REG32(0x40020008u) = 0x0f400000u; /* Clear stream3 flags. */
+    REG32(0x40020060u) = 0x40013020u;
+    REG32(0x40020064u) = 0x24001000u;
+    REG32(0x4002005cu) = 40;
+    REG32(0x4002080cu) = 38; /* SPI1_TX */
+    REG32(0x40020058u) = 1u | (1u << 6) | (1u << 10);
+    REG32(0x40013000u) = 1u | (1u << 9);
+    while (!(REG32(0x40013014u) & 8u)) { }
+}
+
 void Reset_Handler(void)
 {
     uint32_t last_key = 2u;
@@ -81,8 +110,22 @@ void Reset_Handler(void)
     USART1_BRR = 556u; /* Nominal 64 MHz kernel / 115200 baud, digital 8N1. */
     USART1_CR1 = 1u | (1u << 2) | (1u << 3); /* UE, RE, TE. */
     GPIOA_MODER = (GPIOA_MODER & ~((3u << 14) | (3u << 30))) |
-                  (1u << 14); /* A7 output, A15 input. */
-    GPIOA_BSRR = 1u << (7u + 16u);
+                  (2u << 14); /* A7 SPI1, A15 USER input. */
+    REG32(0x5802000cu) = (2u << 14) | (1u << 30); /* DIN pull-down, USER pull-up */
+    REG32(0x58020020u) = 5u << 28;
+    REG32(0x580244d8u) |= 1u; /* DMA1EN */
+    REG32(0x580244f0u) |= 1u << 12; /* SPI1EN */
+    REG32(0x58024450u) = (REG32(0x58024450u) & ~(7u << 12)) | (4u << 12);
+    REG32(0x40013008u) = 7u | (3u << 28) | (1u << 15); /* 8bit, /16, TXDMAEN */
+    REG32(0x4001300cu) = (1u << 22) | (1u << 17) | (1u << 26);
+    REG32(0x58020400u) = (REG32(0x58020400u) & ~(3u << 30)) | (2u << 30);
+    REG32(0x58020424u) = (REG32(0x58020424u) & ~(15u << 28)) | (2u << 28);
+    REG32(0x40001828u) = 63; /* TIM12: 64MHz /64 /500 = 2kHz */
+    REG32(0x4000182cu) = 499;
+    REG32(0x40001838u) = 250;
+    REG32(0x40001818u) = 6u << 12;
+    REG32(0x40001820u) = 1u << 4;
+    REG32(0x40001814u) = 1;
 
     FDCAN1_CCCR = 3u; /* INIT + configuration-change enable. */
     FDCAN1_TXBC = 1u << 24; /* TFQS=1, no dedicated buffers, FIFO at byte 0. */
@@ -104,14 +147,19 @@ void Reset_Handler(void)
     for (;;) {
         uint32_t key = (GPIOA_IDR >> 15) & 1u;
         if (key != last_key) {
-            GPIOA_BSRR = key ? 1u << 23 : 1u << 7;
+            led_color(key ? 0 : 0xffffffu);
+            REG32(0x40001800u) = key ? 0 : 1;
             uart_text("KEY=");
             uart_decimal(key);
             last_key = key;
         }
         if (USART1_ISR & (1u << 5)) {
             uint8_t value = USART1_RDR;
-            if (value == '~') {
+            if (value == '^') {
+                led_color(0x010408u);
+                REG32(0x40001800u) = 1;
+                uart_text("LED=010408\n");
+            } else if (value == '~') {
                 /* Terminal presentation fixture: erase, home, SGR, cursor,
                  * carriage return, backspace and erase-to-end-of-line. */
                 uart_text("\033[2J\033[H\033[31mRED\033[0m\n"

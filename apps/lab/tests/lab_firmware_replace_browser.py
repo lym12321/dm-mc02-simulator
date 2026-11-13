@@ -80,6 +80,7 @@ def main():
                     page.on("pageerror", lambda error: report["browser_errors"].append(str(error)))
                     page.goto(url)
                     page.wait_for_function("!document.querySelector('#primary-button').disabled")
+                    page.locator('#channel-tabs mdui-tab[value="uart"]').click()
                     page.locator("#primary-button").click()
                     page.wait_for_function(f"({UART_TEXT}).includes('SIM_READY minimal-board\\n')")
                     original = state()

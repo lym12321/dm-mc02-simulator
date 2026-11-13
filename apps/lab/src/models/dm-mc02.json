@@ -1,0 +1,74 @@
+{
+  "source": "CtrBoard-H7_V1.0-240112A.step",
+  "sourceBytes": 39113347,
+  "sourceSHA256": "cd8055098363ca79a72e8fdbf727b2685b54db5bb20c29e531e0ca1b0ff18a07",
+  "importer": "occt-import-js 0.0.23",
+  "exporter": "three 0.180.0 GLTFExporter",
+  "tessellation": {
+    "linearUnit": "millimeter",
+    "linearDeflectionType": "absolute_value",
+    "linearDeflection": 0.025,
+    "angularDeflection": 0.2
+  },
+  "parts": 293,
+  "originalTriangles": 1008612,
+  "triangles": 924776,
+  "duplicateMeshes": 6,
+  "materials": 21,
+  "boundsMetres": {
+    "min": [
+      -0.028179650098085405,
+      -0.004912294387817382,
+      -0.02006399917602539
+    ],
+    "max": [
+      0.02806399917602539,
+      0.00892500495910645,
+      0.02006399917602539
+    ]
+  },
+  "glbBytes": 9308948,
+  "glbSHA256": "d55809cc2345d47eb3c8a7d8b84ea6a522d147c8095229e5aca7bce13e47d211",
+  "appearance": "Original STEP geometry. PBR finishes and housing/contact colour masks are visual approximations. Exact duplicate meshes within a part removed; no decimation. No invented silkscreen or circuit traces.",
+  "components": {
+    "BUZZER1": "buzzer",
+    "J1": "usb",
+    "LED3": "led",
+    "P1": "swd",
+    "P2": "can1",
+    "P3": "can2",
+    "P4": "uart2",
+    "P5": "uart3",
+    "P6": "uart5",
+    "P7": "out1",
+    "P8": "out2",
+    "P9": "vin",
+    "P10": "uart1",
+    "P11": "pwm",
+    "P12": "can3",
+    "P13": "uart7",
+    "P15": "uart10",
+    "P16": "expansion",
+    "SW1": "key",
+    "SW2": "reset",
+    "U13": "lcd",
+    "U14": "mcu",
+    "U15": "flash",
+    "U18": "imu"
+  },
+  "compression": {
+    "extension": "EXT_meshopt_compression",
+    "writer": "@gltf-transform 4.5.1",
+    "codec": "meshoptimizer 1.3.0",
+    "preprocessing": "Bitwise weld, size-oriented storage reorder and shared byte-identical attribute/index arrays; no quantization, filters or decimation.",
+    "inputBytes": 12219148,
+    "inputSHA256": "4993859b7b4d312558f8321e6238ad92c229511e2756bd94cb2f31ffa0a8b364",
+    "precision": "Preserves existing GLB float32 position/normal values and oriented triangles; STEP tessellation is unchanged."
+  },
+  "schematic": {
+    "file": "CtrBoard-H7_V1.0-240124.pdf",
+    "sha256": "3c1ca47e807d6c4031aac10af605021e85e47bd56c65f664543bb947ad35595d",
+    "pages": 6,
+    "date": "2024-01-24"
+  }
+}

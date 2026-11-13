@@ -4,27 +4,27 @@ use super::{
     session::{LabSession, SessionError, SessionOptions},
 };
 use axum::{
+    Json, Router,
     body::Bytes,
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
         DefaultBodyLimit, Multipart, Path, Request, State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
     },
-    http::{header, HeaderValue, StatusCode},
+    http::{HeaderValue, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
-use futures::{stream::FuturesUnordered, FutureExt, SinkExt, StreamExt};
-use serde_json::{json, Map, Value};
+use futures::{FutureExt, SinkExt, StreamExt, stream::FuturesUnordered};
+use serde_json::{Map, Value, json};
 use sim_core::Error;
 use std::{
     collections::BTreeMap,
     io::{self, BufRead, Write},
     path::Path as FilePath,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -40,12 +40,18 @@ const ASSET_FILES: &[(&str, &str)] = &[
     ("index.html", "text/html; charset=utf-8"),
     ("app.js", "text/javascript"),
     ("uart-console.js", "text/javascript"),
+    ("board-view.js", "text/javascript"),
+    ("buzzer-audio.js", "text/javascript"),
+    ("board-model.js", "text/javascript"),
+    ("board.svg", "image/svg+xml"),
+    ("models/dm-mc02.glb", "model/gltf-binary"),
     ("style.css", "text/css"),
     ("vendor/mdui.js", "text/javascript"),
     ("vendor/mdui.css", "text/css"),
     ("vendor/xterm.js", "text/javascript"),
     ("vendor/xterm.css", "text/css"),
     ("vendor/addon-fit.js", "text/javascript"),
+    ("vendor/three.js", "text/javascript"),
 ];
 
 struct Assets(BTreeMap<&'static str, (&'static str, Bytes)>);

@@ -17,13 +17,18 @@
   const pending = new Map();
   const uart = new UartConsole($("uart-rx"), $("uart-count"), $("uart-tx-status"));
   const canRecords = [];
+  const buzzer = new BuzzerAudio(message => {
+    $("sound-error").textContent = message; $("sound-error").hidden = !message;
+    $("sound-button").textContent = message ? "声音提示" : buzzer.muted ? "已静音" : "声音";
+  });
+  let dockOpen = false, dockKind = "uart", dockHeight = null;
   const events = [];
   const requestPrefix = Math.random().toString(36).slice(2, 10);
   const LIFECYCLE = new Set(["start", "load", "run", "pause", "stop", "restart"]);
   let state = {status: "idle", session_id: null, firmware: null, board: null, pins: []};
   let project = {schema: "sim/lab-project/v1", firmware: null, watch_elf: false, uarts: [...UARTS], cans: [...CANS], adc: true,
     startup: "run", user_hold_ms: 1000, startup_timeout_secs: 10, timeout_secs: 3600,
-    imu: "stationary", gdb_port: null, usbip: null, actions: {}};
+    imu: "board_pose", gdb_port: null, usbip: null, actions: {}};
   let projectPath = null;
   let projectLoaded = false;
   let socket = null;
@@ -33,7 +38,7 @@
   let exporting = false;
   let commandNumber = 0;
   let reconnectTimer = null;
-  let keyHeld = false;
+  const heldButtons = new Set();
   let lastSeq = 0n;
   let lastLogSession;
   let renderFrame = null;
@@ -41,6 +46,26 @@
   let lastStateError = null;
   let sessionCommandError = null;
   let sessionOperation = null;
+  const boardView = new BoardView(boardComponent, releaseButtons, requestPose);
+  let queuedPose = null, poseTimer = null, poseSentAt = 0;
+  function requestPose(value) {
+    queuedPose = value; flushPose();
+  }
+  function flushPose() {
+    if (!connected || state.status !== "running" || state.motion?.mode !== "board_pose") { queuedPose = null; return; }
+    if (!queuedPose || poseTimer || [...pending.values()].some(item => item.action === "pose")) return;
+    poseTimer = setTimeout(() => {
+      poseTimer = null;
+      const value = queuedPose; queuedPose = null;
+      if (value && connected && state.status === "running") {
+        poseSentAt = performance.now(); send("pose", {orientation_xyzw: value});
+      }
+    }, Math.max(0, 50 - (performance.now() - poseSentAt)));
+  }
+  boardView.ready.then(renderBoard).catch((error) => {
+    $("board-loading").textContent = error.message;
+    eventLog(error.message, true);
+  });
 
   function showError(area, message) {
     const element = $(`${area}-error`);
@@ -123,6 +148,9 @@
     pane.replaceChildren(fragment);
     if (atEnd) pane.scrollTop = pane.scrollHeight;
   }
+  function renderBoard() {
+    boardView.update(state, connected, {uart: activeChannels("uarts"), can: activeChannels("cans")});
+  }
   function renderConsole() { renderUart(); renderCan(); renderEvents(); }
   function scheduleRender(render = renderConsole) {
     renderQueue.add(render);
@@ -181,7 +209,7 @@
     $("restart-button").disabled = !ready || !!uploading || transitioning || lifecyclePending || (!project.firmware && !state.firmware);
     $("stop-button").disabled = !connected || !cancellable || stopPending;
     setText("stop-button", stopPending ? "停止中…" : "停止");
-    for (const id of ["key-button", "vin-send", "gpio-send"]) $(id).disabled = !connected || !active || transitioning;
+    for (const id of ["key-button", "reset-button", "vin-send", "gpio-send"]) $(id).disabled = !connected || !active || transitioning;
     for (const kind of ["uart", "can"]) {
       const enabled = activeChannels(kind === "uart" ? "uarts" : "cans");
       const selector = $(`${kind}-endpoint`);
@@ -210,6 +238,7 @@
     $("settings-dialog").closeOnOverlayClick = !saving;
     $("settings-dialog").closeOnEsc = !saving;
     updateProjectName();
+    scheduleRender(renderBoard);
   }
   function updateProjectName() {
     const path = project.firmware;
@@ -226,11 +255,52 @@
     $("pin-summary").textContent = observed ? `${pin} · ${modes[observed.mode]} · 采样 ${observed.level} · ODR ${observed.odr}` : "—";
   }
   function selectConsole(kind, endpoint) {
+    if (kind !== "board") releaseButtons();
     $("channel-tabs").value = kind;
-    for (const item of ["uart", "can"]) $(`console-${item}`).hidden = item !== kind;
+    for (const item of ["board", "uart", "can"]) $(`console-${item}`).hidden = item !== kind;
     if (endpoint) $(`${kind}-endpoint`).value = endpoint;
+    for (const tool of ["uart", "can"]) $(`console-${tool}`).classList.toggle("docked", kind === "board" && dockOpen && dockKind === tool);
+    $("board-dock").hidden = kind !== "board" || !dockOpen;
+    if (kind === "board" && dockOpen) {
+      $(`console-${dockKind}`).hidden = false;
+      $("dock-kind").value = dockKind;
+      $("dock-title").textContent = portName($(`${dockKind}-endpoint`).value);
+      resizeDock(dockHeight);
+    }
     renderConsole();
+    if (kind === "board") boardView.resize();
     updateControls();
+  }
+  function resizeDock(height) {
+    const workspace = $("board-dock").parentElement;
+    const maximum = Math.max(300, workspace.clientHeight - workspace.querySelector(".workspace-toolbar").offsetHeight - 240);
+    dockHeight = Math.round(Math.max(300, Math.min(maximum, height ?? workspace.clientHeight * .4)));
+    workspace.style.setProperty("--dock-height", `${dockHeight - $("board-dock").offsetHeight}px`);
+    $("dock-divider").setAttribute("aria-valuemax", maximum);
+    $("dock-divider").setAttribute("aria-valuenow", dockHeight);
+    boardView.resize();
+  }
+  function openDock(kind, endpoint) {
+    releaseButtons(); dockOpen = true; dockKind = kind;
+    if (endpoint) $(`${kind}-endpoint`).value = endpoint;
+    selectConsole("board");
+  }
+  function boardComponent(component, intent) {
+    scheduleRender(renderBoard);
+    if (intent === "select") return;
+    if (component.endpoint) {
+      if (activeChannels(component.kind === "uart" ? "uarts" : "cans").includes(component.endpoint)) {
+        openDock(component.kind, component.endpoint);
+      } else if (intent === "action") $("settings-button").click();
+      return;
+    }
+    const peripheral = intent === "gpio" ? "gpio" : intent === "adc" ? "adc"
+      : ["vin", "usb"].includes(component.kind) ? component.kind : null;
+    if (!peripheral) return;
+    $("peripheral-tabs").value = peripheral; selectPeripheral(peripheral);
+    if (component.pin) selectPin(component.pin);
+    if (intent === "adc") $("adc-channel").value = "18";
+    $("peripherals-dialog").open = true;
   }
   function applyState(value) {
     const changedOwner = value.owner_id !== state.owner_id;
@@ -241,7 +311,8 @@
       scheduleRender();
     }
     state = value;
-    if (changedOwner || changedSession) keyHeld = false;
+    buzzer.update(state, connected);
+    if (changedOwner || changedSession) heldButtons.clear();
     $("session-status").textContent = names[value.status] || value.status;
     $("session-status").dataset.status = value.status;
     const board = value.board;
@@ -252,11 +323,13 @@
     $("vin-value").textContent = board ? `${board.vin_mv} mV` : "—";
     $("key-button").title = board?.key.pressed ? "USER 已按下" : "按住 USER";
     $("key-button").setAttribute("aria-pressed", String(Boolean(board?.key.pressed)));
+    $("reset-button").title = board?.reset?.pressed ? "RESET 已按下" : "按住 RESET";
+    $("reset-button").setAttribute("aria-pressed", String(Boolean(board?.reset?.pressed)));
     const color = board ? `#${board.led.rgb.toString(16).padStart(6, "0").toUpperCase()}` : null;
     $("led-value").textContent = color || "—";
-    $("board-led").style.backgroundColor = color || "transparent";
+    $("board-led").style.backgroundColor = board ? ledDisplayColor(board.led.rgb) : "transparent";
     $("board-led").setAttribute("aria-label", color ? `LED ${color}` : "LED 无数据");
-    $("led-observation").title = board ? `${board.led.source === "ws2812-dma" ? "WS2812 DMA 波形" : "GPIO latch 近似"} · RGB ${(board.led.rgb >>> 16) & 255}, ${(board.led.rgb >>> 8) & 255}, ${board.led.rgb & 255} · 亮度 ${board.led.brightness}` : "LED 无数据";
+    $("led-observation").title = board ? `${ledSourceLabel(board.led.source)} · RGB ${(board.led.rgb >>> 16) & 255}, ${(board.led.rgb >>> 8) & 255}, ${board.led.rgb & 255}` : "LED 无数据";
     const usb = value.usb || {state: "disabled"};
     $("usb-status").textContent = "USB · " + (({disabled: "未启用", disconnected: "未连接", enumerating: "枚举中", available: "可连接", attached: "已连接"})[usb.state] || usb.state);
     $("usb-status").hidden = usb.state === "disabled";
@@ -292,6 +365,10 @@
     const request = pending.get(event.id);
     if (!request) return;
     pending.delete(event.id);
+    if (request.action === "pose") {
+      if (!event.ok) queuedPose = null;
+      flushPose();
+    }
     if (!event.ok) {
       if (request.area !== "session" || event.id === sessionOperation) fail(request.area, String(event.error || "请求被拒绝。"));
     } else if (request.accepted) request.accepted(event);
@@ -310,7 +387,9 @@
       } catch (error) { fail("session", `服务端消息：${error.message}`); }
     });
     socket.addEventListener("close", () => {
-      connected = false; keyHeld = false;
+      connected = false; heldButtons.clear();
+      queuedPose = null;
+      buzzer.update(state, false);
       if (uploading) uploading.startRequested = false;
       if (pending.size) eventLog(`${pending.size} 个请求未收到结果；不会重发。`, true);
       pending.clear(); $("connection-status").textContent = "重新连接…"; updateControls();
@@ -318,16 +397,19 @@
     });
     socket.addEventListener("error", () => { $("connection-status").textContent = "连接不可用"; });
   }
-  function pressKey(event) {
-    if ($("key-button").disabled || keyHeld) return;
+  function pressButton(name, event) {
+    const button = $(`${name}-button`);
+    if (button.disabled || heldButtons.has(name)) return;
     event.preventDefault();
-    keyHeld = send("key", {pressed: true});
-    if (keyHeld && event.pointerId !== undefined) $("key-button").setPointerCapture(event.pointerId);
+    if (send(name, {pressed: true})) {
+      heldButtons.add(name);
+      if (event.pointerId !== undefined) button.setPointerCapture(event.pointerId);
+    }
   }
-  function releaseKey() {
-    if (!keyHeld) return;
-    keyHeld = false;
-    send("key", {pressed: false});
+  function releaseButtons() {
+    const released = [...heldButtons];
+    heldButtons.clear();
+    for (const name of released) send(name, {pressed: false});
   }
   function form(id, action, args, area = "board", accepted = null) {
     $(id).addEventListener("submit", (event) => {
@@ -455,8 +537,35 @@
     $("events-close").addEventListener("click", () => { $("events-dialog").open = false; });
     $("gpio-pin").addEventListener("change", () => selectPin($("gpio-pin").value));
     $("channel-tabs").addEventListener("change", () => selectConsole($("channel-tabs").value));
+    $("dock-kind").addEventListener("change", () => {
+      if (["uart", "can"].includes($("dock-kind").value)) openDock($("dock-kind").value);
+      else $("dock-kind").value = dockKind;
+    });
+    $("dock-close").addEventListener("click", () => { dockOpen = false; selectConsole("board"); });
+    $("dock-expand").addEventListener("click", () => selectConsole(dockKind));
+    const divider = $("dock-divider");
+    divider.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      divider.setPointerCapture(event.pointerId); divider.focus(); event.preventDefault();
+    });
+    divider.addEventListener("pointermove", event => {
+      if (divider.hasPointerCapture(event.pointerId)) resizeDock($("board-dock").parentElement.getBoundingClientRect().bottom - event.clientY);
+    });
+    divider.addEventListener("pointerup", event => {
+      if (divider.hasPointerCapture(event.pointerId)) divider.releasePointerCapture(event.pointerId);
+    });
+    divider.addEventListener("keydown", event => {
+      if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+        resizeDock(event.key === "Home" ? 300 : event.key === "End" ? Infinity : dockHeight + (event.key === "ArrowUp" ? 20 : -20));
+        event.preventDefault();
+      }
+    });
+    new ResizeObserver(() => { if (!$("board-dock").hidden) resizeDock(dockHeight); }).observe($("board-dock").parentElement);
     for (const kind of ["uart", "can"]) {
-      $(`${kind}-endpoint`).addEventListener("change", () => selectConsole(kind, $(`${kind}-endpoint`).value));
+      $(`${kind}-endpoint`).addEventListener("change", () => {
+        if ($("channel-tabs").value === "board") openDock(kind, $(`${kind}-endpoint`).value);
+        else selectConsole(kind, $(`${kind}-endpoint`).value);
+      });
       $(`${kind}-scroll`).addEventListener("change", renderConsole);
     }
     // A format always has one selection; MDUI otherwise allows toggling it off.
@@ -477,6 +586,7 @@
     $("can-clear").addEventListener("click", () => { for (let index = canRecords.length - 1; index >= 0; index -= 1) if (canRecords[index].endpoint === $("can-endpoint").value) canRecords.splice(index, 1); renderCan(); });
     $("events-clear").addEventListener("click", () => { events.length = 0; renderEvents(); });
     $("primary-button").addEventListener("click", () => {
+      if (!buzzer.muted && state.status !== "running") buzzer.unlock();
       if (uploading) {
         uploading.startRequested = true; sessionCommandError = null; showError("session", ""); updateControls(); return;
       }
@@ -485,17 +595,39 @@
       else send("start", {config: structuredClone(project)}, "session");
     });
     $("restart-button").addEventListener("click", () => send("restart", {config: structuredClone(project)}, "session"));
+    $("sound-button").addEventListener("click", () => { $("sound-dialog").open = true; });
+    $("sound-close").addEventListener("click", () => { $("sound-dialog").open = false; });
+    // Persistent profile cookie deliberately spans the backend's random ports.
+    const soundPreference = document.cookie.split('; ').find(item => item.startsWith('dm_mc02_audio='))?.split('=')[1];
+    if (soundPreference && /^(100|[0-9]{1,2}),[01]$/.test(soundPreference)) {
+      const [volume, muted] = soundPreference.split(',').map(Number);
+      $("sound-volume").value = volume; $("sound-enabled").checked = !muted;
+    }
+    const soundSettings = () => {
+      buzzer.settings(Number($("sound-volume").value) / 100, !$("sound-enabled").checked);
+      $("sound-volume-value").textContent = `${Math.round(buzzer.volume * 100)}%`;
+      $("sound-button").textContent = buzzer.muted ? "已静音" : "声音";
+      $("sound-button").setAttribute("aria-pressed", String(!buzzer.muted));
+      document.cookie = `dm_mc02_audio=${Math.round(buzzer.volume * 100)},${Number(buzzer.muted)}; Max-Age=31536000; Path=/; SameSite=Strict`;
+    };
+    soundSettings();
+    $("sound-volume").addEventListener("input", soundSettings);
+    $("sound-enabled").addEventListener("change", () => { soundSettings(); if (!buzzer.muted) buzzer.unlock(); });
+    window.addEventListener("pagehide", () => buzzer.silence());
     $("stop-button").addEventListener("click", () => {
       if (uploading?.startRequested) { uploading.startRequested = false; updateControls(); return; }
       send("stop", {}, "session");
     });
     $("usb-attach").addEventListener("click", () => send("usb_attach")); $("usb-detach").addEventListener("click", () => send("usb_detach"));
-    $("key-button").addEventListener("pointerdown", pressKey);
-    for (const event of ["pointerup", "pointercancel", "lostpointercapture", "blur"]) $("key-button").addEventListener(event, releaseKey);
-    $("key-button").addEventListener("keydown", (event) => { if (["Space", "Enter"].includes(event.code)) pressKey(event); });
-    $("key-button").addEventListener("keyup", (event) => { if (["Space", "Enter"].includes(event.code)) { event.preventDefault(); releaseKey(); } });
-    window.addEventListener("blur", releaseKey); window.addEventListener("pagehide", releaseKey);
-    document.addEventListener("visibilitychange", () => { if (document.hidden) releaseKey(); });
+    for (const name of ["key", "reset"]) {
+      const button = $(`${name}-button`);
+      button.addEventListener("pointerdown", event => pressButton(name, event));
+      for (const event of ["pointerup", "pointercancel", "lostpointercapture", "blur"]) button.addEventListener(event, releaseButtons);
+      button.addEventListener("keydown", event => { if (["Space", "Enter"].includes(event.code)) pressButton(name, event); });
+      button.addEventListener("keyup", event => { if (["Space", "Enter"].includes(event.code)) { event.preventDefault(); releaseButtons(); } });
+    }
+    window.addEventListener("blur", releaseButtons); window.addEventListener("pagehide", releaseButtons);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) releaseButtons(); });
     form("vin-form", "vin", () => ({millivolts: integer($("vin-input").value, "VIN", 4294967295)}));
     form("gpio-form", "gpio", () => ({pin: $("gpio-pin").value, level: Number($("gpio-level").value)}));
     form("uart-form", "uart", () => {
@@ -540,7 +672,7 @@
       finally { uploading = null; $("firmware-input").value = ""; updateControls(); }
       if (upload.startRequested) send("start", {config: structuredClone(project)}, "session");
     });
-    renderSettings(); selectPin("B0"); selectConsole("uart", "uart1"); updateControls();
+    renderSettings(); selectPin("B0"); selectConsole("board"); updateControls();
   }
   initialize();
   Promise.allSettled([

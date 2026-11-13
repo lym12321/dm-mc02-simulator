@@ -12,6 +12,8 @@
   <script src="/vendor/xterm.js" defer></script>
   <script src="/vendor/addon-fit.js" defer></script>
   <script src="/uart-console.js" defer></script>
+  <script src="/board-view.js" defer></script>
+  <script src="/buzzer-audio.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -31,13 +33,69 @@
   <div id="session-error" class="operation-error" role="alert" hidden></div>
   <main class="workspace">
     <div class="workspace-toolbar">
-      <mdui-tabs id="channel-tabs" value="uart"><mdui-tab value="uart">UART</mdui-tab><mdui-tab value="can">CAN</mdui-tab></mdui-tabs>
+      <mdui-tabs id="channel-tabs" value="board"><mdui-tab value="board">板卡</mdui-tab><mdui-tab value="uart">串口</mdui-tab><mdui-tab value="can">CAN</mdui-tab></mdui-tabs>
       <div class="board-actions">
-        <mdui-button id="key-button" variant="tonal" disabled aria-label="按住 USER" aria-pressed="false">USER</mdui-button>
+        <mdui-button id="sound-button" variant="text" aria-pressed="true">声音</mdui-button>
         <mdui-button id="peripherals-button" variant="text">引脚与外设</mdui-button>
       </div>
     </div>
-    <section id="console-uart" class="console-content" aria-label="UART 控制台">
+    <section id="console-board" class="board-content" aria-label="DM-MC02 板卡首页">
+      <div class="board-stage">
+        <div class="board-stage-toolbar">
+          <div><span class="board-eyebrow">DM-MC02</span><span id="board-observation" role="status">等待观测</span></div>
+          <div id="board-motion-controls" class="board-motion-controls">
+            <mdui-segmented-button-group id="board-interaction" value="body" selects="single" aria-label="拖动操作"><mdui-segmented-button value="body">动板子</mdui-segmented-button><mdui-segmented-button value="camera">转视角</mdui-segmented-button></mdui-segmented-button-group>
+            <mdui-button id="board-level" variant="text" disabled>放平</mdui-button>
+            <span id="board-motion-status" role="status"></span>
+          </div>
+          <div class="board-view-controls" aria-label="板卡视图">
+            <mdui-segmented-button-group id="board-mode" value="3d" selects="single" aria-label="展示方式"><mdui-segmented-button id="board-mode-3d" value="3d">三维</mdui-segmented-button><mdui-segmented-button value="2d">二维</mdui-segmented-button></mdui-segmented-button-group>
+            <mdui-button id="board-zoom-out" variant="text" aria-label="缩小板卡">−</mdui-button>
+            <span id="board-zoom" class="mono">100%</span>
+            <mdui-button id="board-zoom-in" variant="text" aria-label="放大板卡">+</mdui-button>
+            <mdui-button id="board-fit" variant="text">适应窗口</mdui-button>
+            <mdui-button id="board-top" variant="text">俯视</mdui-button>
+            <mdui-button id="board-bottom" variant="text">背面</mdui-button>
+          </div>
+        </div>
+        <div id="board-viewport" aria-label="板卡俯视图，可拖动平移">
+          <div id="board-model" hidden></div>
+          <div id="board-scene">
+            <div id="board-art"></div>
+            <div id="board-hotspots"><mdui-button id="key-button" class="board-hotspot" variant="text" disabled aria-label="按住 USER" aria-pressed="false" hidden>USER</mdui-button><mdui-button id="reset-button" class="board-hotspot" variant="text" disabled aria-label="按住 RESET" aria-pressed="false" hidden>RESET</mdui-button></div>
+          </div>
+          <span id="board-loading">正在加载板卡…</span>
+        </div>
+        <p id="board-model-error" class="operation-error" role="status" hidden></p>
+        <div class="board-stage-caption"><span id="board-view-hint">拖动改变姿态 · 滚轮缩放 · 右键平移</span><span>点击元件查看详情 · 按住 USER / RESET</span></div>
+      </div>
+      <aside class="board-detail" aria-label="器件详情">
+        <span id="board-detail-ref" class="board-eyebrow">器件与接口</span>
+        <div id="board-part-search" hidden>
+          <mdui-text-field id="board-search" variant="outlined" label="查找元件或接口" placeholder="位号、型号、UART、CAN" clearable></mdui-text-field>
+          <div id="board-search-results" aria-label="匹配元件" hidden></div>
+          <p id="board-search-status" role="status" hidden></p>
+          <mdui-button id="board-locate" variant="text" disabled>定位元件</mdui-button>
+        </div>
+        <h1 id="board-detail-title">喵板 · DM-MC02</h1>
+        <p id="board-detail-description">选择板上的器件或接口，查看状态与可用操作。</p>
+        <div id="board-detail-state" class="board-detail-state"></div>
+        <mdui-button id="board-detail-action" variant="tonal" hidden></mdui-button>
+        <mdui-button id="board-detail-adc" variant="text" hidden>施加 ADC 输入 · CH18</mdui-button>
+        <div id="board-pin-list" class="board-pin-list"></div>
+        <p id="board-detail-note" class="board-detail-note">选择接口后可打开通信面板。</p>
+      </aside>
+    </section>
+    <section id="board-dock" aria-label="板卡通信面板" hidden>
+      <div id="dock-divider" role="separator" tabindex="0" aria-label="调整通信面板高度" aria-orientation="horizontal" aria-valuemin="300" aria-valuemax="500" aria-valuenow="300"></div>
+      <div class="dock-toolbar">
+        <mdui-segmented-button-group id="dock-kind" value="uart" selects="single" aria-label="通信工具"><mdui-segmented-button value="uart">串口</mdui-segmented-button><mdui-segmented-button value="can">CAN</mdui-segmented-button></mdui-segmented-button-group>
+        <strong id="dock-title">UART1</strong>
+        <mdui-button id="dock-expand" variant="text">展开到工具页</mdui-button>
+        <mdui-button id="dock-close" variant="text">收起</mdui-button>
+      </div>
+    </section>
+    <section id="console-uart" class="console-content" aria-label="UART 控制台" hidden>
       <div class="console-toolbar">
         <mdui-select id="uart-endpoint" variant="outlined" label="端口" value="uart1"></mdui-select>
         <mdui-segmented-button-group id="uart-receive-format" value="text" selects="single" aria-label="接收格式"><mdui-segmented-button value="text">终端</mdui-segmented-button><mdui-segmented-button value="hex">HEX</mdui-segmented-button></mdui-segmented-button-group>
@@ -66,6 +124,15 @@
       </form>
     </section>
   </main>
+  <mdui-dialog id="sound-dialog" headline="蜂鸣器声音">
+    <div class="stack">
+      <div class="sound-row"><span>播放声音</span><mdui-switch id="sound-enabled" checked aria-label="播放声音"></mdui-switch></div>
+      <div class="sound-row"><span>音量</span><output id="sound-volume-value">20%</output></div>
+      <mdui-slider id="sound-volume" min="0" max="100" value="20" aria-label="音量"></mdui-slider>
+      <p id="sound-error" class="operation-error" role="alert" hidden></p>
+    </div>
+    <mdui-button id="sound-close" slot="action" variant="text">完成</mdui-button>
+  </mdui-dialog>
   <footer class="statusbar">
     <span id="session-status" aria-live="polite">未启动</span>
     <span id="virtual-time" class="mono">—</span>
@@ -114,7 +181,7 @@
       </mdui-collapse-item><mdui-collapse-item header="高级" id="advanced-settings">
         <div class="stack settings-group">
           <div class="form-row"><mdui-text-field id="project-startup-timeout" variant="outlined" label="启动期限 / s" type="number" min="1" step="1" value="10"></mdui-text-field><mdui-text-field id="project-timeout" variant="outlined" label="运行期限 / s" type="number" min="1" step="1" value="3600"></mdui-text-field></div>
-          <mdui-select id="project-imu" variant="outlined" label="IMU" value="stationary"><mdui-menu-item value="stationary">静止板</mdui-menu-item><mdui-menu-item value="off">关闭</mdui-menu-item></mdui-select>
+          <mdui-select id="project-imu" variant="outlined" label="IMU 输入" value="board_pose"><mdui-menu-item value="board_pose">板子姿态</mdui-menu-item><mdui-menu-item value="stationary">固定静止输入</mdui-menu-item><mdui-menu-item value="off">关闭</mdui-menu-item></mdui-select>
           <div id="project-channels" class="channel-settings"></div>
           <div id="project-path" class="mono secondary-text"></div>
         </div>

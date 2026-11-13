@@ -4,6 +4,8 @@
 
 发行目录中双击 `DM-MC02 Simulator.exe`，打开 ELF 即可运行、暂停、重载固件，查看 UART/CAN，操作 USER 按键和引脚外设。保留旁边的 `runtime/`、`lab/` 和 DLL。运行时需要 Windows WebView2，无需安装 Rust、Node.js 或 MSYS2。关闭窗口会结束当前实验并清理后端进程。
 
+默认首页显示从 STEP 转换的 DM-MC02 精细三维装配。拖动板体可输入姿态，USER、RESET 可直接按住操作；RGB 灯发光，蜂鸣器按固件输出播放声音。串口/CAN 可停靠在板卡下方或展开为工具页，元件支持搜索与定位。操作与资料说明见 [FRONTEND.md](docs/FRONTEND.md) 和 [BOARD.md](docs/BOARD.md)。
+
 ## 开发界面
 
 本工程由 `cargo create-tauri-app` 的 Tauri 2 / vanilla 模板创建。先安装 Node.js、Rust、WebView2 和后端构建依赖；从仓库根目录进入：

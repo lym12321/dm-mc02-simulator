@@ -3,8 +3,8 @@ use crate::cli_support::seconds;
 use clap::{Args, ValueEnum};
 use sim_host::{
     lab::{
-        project::{LabProject, ProjectFile},
         ImuMode, StartupMode,
+        project::{LabProject, ProjectFile},
     },
     launch::LaunchError,
 };
@@ -29,12 +29,14 @@ impl From<Startup> for StartupMode {
 pub(crate) enum Imu {
     Off,
     Stationary,
+    BoardPose,
 }
 impl From<Imu> for ImuMode {
     fn from(value: Imu) -> Self {
         match value {
             Imu::Off => Self::Off,
             Imu::Stationary => Self::Stationary,
+            Imu::BoardPose => Self::BoardPose,
         }
     }
 }
@@ -54,7 +56,7 @@ pub(crate) struct LaunchOptions {
     pub(crate) cans: Vec<String>,
     #[arg(long, num_args=0..=1, default_missing_value="true", value_parser=clap::value_parser!(bool))]
     pub(crate) adc: Option<bool>,
-    /// IMU input fixture: a stationary board or no supplied samples.
+    /// IMU input: board pose, fixed stationary sample, or off.
     #[arg(long, value_enum)]
     pub(crate) imu: Option<Imu>,
     #[arg(long)]

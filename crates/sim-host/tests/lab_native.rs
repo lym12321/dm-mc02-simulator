@@ -364,3 +364,183 @@ fn free_run_consumer_failure_keeps_identity_and_reaps_native_resources() {
     let (pid, directory) = identity.unwrap();
     cleaned(pid, directory);
 }
+
+#[test]
+#[ignore = "requires SIM_NATIVE_QEMU and SIM_NATIVE_POSE_ELF"]
+fn board_pose_six_faces_reach_real_bmi088_spi() {
+    let mut options = options("SIM_NATIVE_POSE_ELF");
+    options.imu = ImuMode::BoardPose;
+    let (pid, directory) = with_lab(options, |lab| {
+        lab.resume()?;
+        wait_uart(lab, &mut Vec::new(), b"POSE_READY\n")?;
+        let h = std::f64::consts::FRAC_1_SQRT_2;
+        // Bosch Fig.12 with the CAD pin-1 mounting; +/-1g at +/-6g is
+        // signed 5461 counts. Expected bytes are independent fixed literals.
+        for (orientation, expected) in [
+            ([0., 0., 0., 1.], "000000005515"),
+            ([1., 0., 0., 0.], "00000000abea"),
+            ([h, 0., 0., h], "551500000000"),
+            ([-h, 0., 0., h], "abea00000000"),
+            ([0., h, 0., h], "000055150000"),
+            ([0., -h, 0., h], "0000abea0000"),
+        ] {
+            lab.inject(LabInput::Key(false))?;
+            let start = lab.inject(LabInput::Pose(orientation))?;
+            loop {
+                let (snapshot, _) = lab.pump()?;
+                if snapshot["timestamp_ns"].as_u64().unwrap() >= start + 400_000_000 {
+                    break;
+                }
+                lab.wait(None, Duration::from_millis(2))?;
+            }
+            lab.inject(LabInput::Key(true))?;
+            let mut text = Vec::new();
+            wait_uart(lab, &mut text, b"\n")?;
+            assert_eq!(
+                String::from_utf8(text).unwrap(),
+                format!("POSE g=000000000000 a={expected}\n")
+            );
+        }
+        lab.pause()?;
+        let stamp = lab.snapshot()?["timestamp_ns"].as_u64().unwrap();
+        let paused = lab.motion_state(stamp)?;
+        lab.wait(None, Duration::from_millis(10))?;
+        let later = lab.snapshot()?["timestamp_ns"].as_u64().unwrap();
+        assert_eq!(lab.motion_state(later)?, paused);
+        Ok((lab.pid(), lab.directory()))
+    })
+    .unwrap();
+    cleaned(pid, directory);
+}
+
+#[test]
+#[ignore = "requires SIM_NATIVE_QEMU and SIM_NATIVE_POSE_ELF"]
+fn moving_board_pose_reaches_real_gyro_before_settling() {
+    let mut options = options("SIM_NATIVE_POSE_ELF");
+    options.imu = ImuMode::BoardPose;
+    let (pid, directory) = with_lab(options, |lab| {
+        lab.resume()?;
+        wait_uart(lab, &mut Vec::new(), b"POSE_READY\n")?;
+        let half_angle = std::f64::consts::PI / 12.0;
+        for (orientation, direction) in [
+            ([0., 0., half_angle.sin(), half_angle.cos()], 1.),
+            ([0., 0., 0., 1.], -1.),
+        ] {
+            lab.inject(LabInput::Key(false))?;
+            let start = lab.inject(LabInput::Pose(orientation))?;
+            loop {
+                let (snapshot, _) = lab.pump()?;
+                if snapshot["timestamp_ns"].as_u64().unwrap() >= start + 30_000_000 {
+                    break;
+                }
+                // Same maximum wait as the GUI session's input pump.
+                lab.wait(None, Duration::from_millis(5))?;
+            }
+            lab.inject(LabInput::Key(true))?;
+            let mut text = Vec::new();
+            wait_uart(lab, &mut text, b"\n")?;
+            let text = String::from_utf8(text).unwrap();
+            let gyro = text
+                .strip_prefix("POSE g=")
+                .unwrap()
+                .split(' ')
+                .next()
+                .unwrap();
+            let raw: Vec<_> = (0..6)
+                .map(|i| u8::from_str_radix(&gyro[i * 2..i * 2 + 2], 16).unwrap())
+                .collect();
+            let axes: Vec<_> = raw
+                .chunks_exact(2)
+                .map(|b| i16::from_le_bytes([b[0], b[1]]) as f64 * 1000.0 / 32768.0)
+                .collect();
+            // The fixture selects Bosch +/-1000 deg/s. Body Z = sensor Z;
+            // a 30-degree, 100-ms turn peaks near 450 deg/s. Allow sample
+            // latency, while requiring the correct moving axis and direction.
+            assert!(axes[0].abs() < 1. && axes[1].abs() < 1., "{axes:?}");
+            assert!((100.0..600.0).contains(&(direction * axes[2])), "{axes:?}");
+            // After the 100-ms trajectory, allow 300 ms for the configured
+            // 12-Hz gyro / 10-Hz accel filters at 100 Hz to decay below half
+            // an LSB. The native register output retains this filter history.
+            loop {
+                let (snapshot, _) = lab.pump()?;
+                if snapshot["timestamp_ns"].as_u64().unwrap() >= start + 400_000_000 {
+                    break;
+                }
+                lab.wait(None, Duration::from_millis(5))?;
+            }
+        }
+        lab.inject(LabInput::Key(false))?;
+        lab.wait(None, Duration::from_millis(5))?;
+        lab.inject(LabInput::Key(true))?;
+        let mut text = Vec::new();
+        wait_uart(lab, &mut text, b"\n")?;
+        assert_eq!(
+            String::from_utf8(text).unwrap(),
+            "POSE g=000000000000 a=000000005515\n"
+        );
+        Ok((lab.pid(), lab.directory()))
+    })
+    .unwrap();
+    cleaned(pid, directory);
+}
+
+#[test]
+#[ignore = "requires SIM_NATIVE_QEMU and SIM_NATIVE_POSE_ELF"]
+fn nrst_holds_cpu_until_release_across_pause_and_interrupt_input() {
+    let mut options = options("SIM_NATIVE_POSE_ELF");
+    options.imu = ImuMode::BoardPose;
+    let (pid, directory) = with_lab(options, |lab| {
+        lab.resume()?;
+        wait_uart(lab, &mut Vec::new(), b"POSE_READY\n")?;
+        for _ in 0..2 {
+            lab.inject(LabInput::Reset(true))?;
+            loop {
+                let (_, events) = lab.pump()?;
+                if events
+                    .iter()
+                    .any(|event| matches!(event.data, ChannelData::Reset))
+                {
+                    break;
+                }
+                lab.wait(None, Duration::from_millis(2))?;
+            }
+            assert_eq!(lab.snapshot()?["reset"]["pressed"], true);
+            // Fixed fixture linker places ticks_ms at the first DTCM word.
+            let counter = |lab: &mut ConnectedLab<'_>| {
+                lab.command(commands::human_monitor_command {
+                    cpu_index: None,
+                    command_line: "xp /1wx 0x20000000".into(),
+                })
+            };
+            let held = counter(lab)?;
+            lab.inject(LabInput::Reset(true))?; // Repeated press is not a reset.
+            lab.pause()?;
+            lab.resume()?;
+            lab.inject(LabInput::Key(true))?;
+            let start = lab.snapshot()?["timestamp_ns"].as_u64().unwrap();
+            loop {
+                let (snapshot, events) = lab.pump()?;
+                assert!(
+                    !events
+                        .iter()
+                        .any(|event| matches!(event.data, ChannelData::Reset))
+                );
+                assert!(!events.iter().any(
+                    |event| matches!(&event.data, ChannelData::Uart(bytes) if !bytes.is_empty())
+                ));
+                if snapshot["timestamp_ns"].as_u64().unwrap() >= start + 50_000_000 {
+                    break;
+                }
+                lab.wait(None, Duration::from_millis(2))?;
+            }
+            assert_eq!(counter(lab)?, held, "held CPU executed SysTick");
+            lab.inject(LabInput::Key(false))?;
+            lab.inject(LabInput::Reset(false))?;
+            wait_uart(lab, &mut Vec::new(), b"POSE_READY\n")?;
+            assert_eq!(lab.snapshot()?["reset"]["pressed"], false);
+        }
+        Ok((lab.pid(), lab.directory()))
+    })
+    .unwrap();
+    cleaned(pid, directory);
+}

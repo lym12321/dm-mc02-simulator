@@ -1,0 +1,18 @@
+{
+  "name": "dm-mc02-board-model-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "convert": "node convert.mjs",
+    "bundle": "node bundle.mjs"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "4.5.1",
+    "@gltf-transform/extensions": "4.5.1",
+    "@gltf-transform/functions": "4.5.1",
+    "esbuild": "0.25.11",
+    "meshoptimizer": "1.3.0",
+    "occt-import-js": "0.0.23",
+    "three": "0.180.0"
+  }
+}

@@ -52,10 +52,20 @@ def main():
                     time.sleep(.02)
             assert not project_path.exists() and not identities(process.pid)
             with sync_playwright() as playwright:
-                browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"],
+                browser = playwright.chromium.launch(headless=True, args=["--no-sandbox", "--enable-unsafe-swiftshader"],
                     **({"channel": args.browser_channel} if args.browser_channel != "chromium" else {}))
                 try:
                     page = browser.new_page(viewport={"width": 1366, "height": 768}, reduced_motion="reduce")
+                    page.add_init_script("""(() => {
+                        const NativeAudio = window.AudioContext;
+                        window.AudioContext = class extends NativeAudio {
+                            constructor(...args) { super(...args); window.labAudio = this; this.tones = []; }
+                            createGain() { const gain = super.createGain(); this.outputGain = gain; return gain; }
+                            createOscillator() {
+                                const oscillator = super.createOscillator(); this.tones.push(oscillator); return oscillator;
+                            }
+                        };
+                    })()""")
                     page.set_default_timeout(6000)
                     page.on("pageerror", lambda error: report["browser_errors"].append(str(error)))
                     def track_uart(data):
@@ -65,13 +75,79 @@ def main():
                     page.on("websocket", lambda socket: socket.on("framesent", track_uart))
                     page.goto(url)
                     page.wait_for_function("!document.querySelector('#primary-button').disabled")
+                    page.locator('#board-model[data-ready="true"]').wait_for(timeout=30000)
+                    assert page.locator("#console-board").is_visible()
+                    assert page.locator("[data-led-core]").get_attribute("aria-label") == "LED 无数据"
+                    page.screenshot(path=str(args.output / "board-idle.png"), animations="disabled")
+                    # Disabled physical ports stay on the board, rather than
+                    # silently opening the first enabled endpoint.
+                    page.locator("#settings-button").click()
+                    page.locator("#advanced-settings").click()
+                    page.locator("#project-uart2").click()
+                    page.locator("#settings-apply").click()
+                    page.wait_for_function("!document.querySelector('#settings-dialog').open")
+                    page.locator("#board-search input").fill('P4')
+                    page.locator('#board-search-results mdui-button[data-ref="P4"]').click()
+                    assert page.locator("#console-board").is_visible()
+                    page.wait_for_function("document.querySelector('#board-detail-state').textContent.includes('未启用')")
+                    page.locator("#board-detail-action").click()
+                    page.wait_for_function("document.querySelector('#settings-dialog').open")
+                    page.locator("#project-uart2").click()
+                    page.locator("#settings-apply").click()
+                    page.wait_for_function("!document.querySelector('#settings-dialog').open")
                     assert page.locator("#uart-newline").evaluate("element=>element.value") == "crlf"
                     assert page.locator("#primary-button").inner_text() == "启动"
                     page.locator("#primary-button").click()
+                    page.wait_for_function("document.querySelector('#session-status').textContent==='运行中'")
+                    page.wait_for_function("!document.querySelector('#board-level').disabled")
+                    canvas = page.locator("#board-model canvas")
+                    rect = canvas.bounding_box()
+                    def drag_board():
+                        page.mouse.move(rect["x"] + rect["width"] * .3, rect["y"] + rect["height"] * .5)
+                        page.mouse.down()
+                        page.mouse.move(rect["x"] + rect["width"] * .3 + 70, rect["y"] + rect["height"] * .5 + 40, steps=8)
+                        page.mouse.up()
+                    drag_board()
+                    page.wait_for_function("async()=>{const s=await(await fetch('/api/state')).json();return Math.abs(s.motion.orientation_xyzw[3])<.999}")
+                    page.wait_for_timeout(250) # Let the native 100ms trajectory finish.
+                    orientation = page.evaluate("async()=>(await(await fetch('/api/state')).json()).motion.orientation_xyzw")
+                    page.locator('#board-interaction mdui-segmented-button[value="camera"]').click()
+                    drag_board()
+                    assert page.evaluate("async()=>(await(await fetch('/api/state')).json()).motion.orientation_xyzw") == orientation
+                    page.locator('#board-interaction mdui-segmented-button[value="body"]').click()
+                    page.locator("#board-level").click()
+                    page.wait_for_function("async()=>{const s=await(await fetch('/api/state')).json();return s.motion.orientation_xyzw[3]===1}")
+                    page.locator("#board-fit").click()
+                    page.locator("#board-search input").fill('P10')
+                    page.locator('#board-search-results mdui-button[data-ref="P10"]').click()
+                    page.locator("#board-detail-action").click()
+                    assert page.locator("#uart-endpoint").evaluate("e=>e.value") == "uart1"
                     page.wait_for_function(f"({UART_TEXT}).includes('LAB_READY\\n')")
+                    assert page.locator("#console-board").is_visible()
+                    assert page.locator("#board-dock").is_visible()
+                    assert page.locator("#dock-title").inner_text() == "UART1"
+                    page.locator("#uart-data input").fill("draft")
+                    page.locator("#dock-divider").focus()
+                    page.keyboard.press("ArrowUp")
+                    page.screenshot(path=str(args.output / "board-dock.png"), animations="disabled")
+                    page.locator("#dock-expand").click()
+                    assert page.locator("#console-board").is_hidden()
+                    assert page.locator("#uart-data").evaluate("e=>e.value") == "draft"
+                    page.locator("#uart-data input").fill("")
+
                     initial = identities(process.pid)
                     assert len(initial) == 1
                     report["native_identities"].extend(initial)
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
+                    reset = page.locator("#reset-button button")
+                    reset.focus(); page.keyboard.down("Space")
+                    try:
+                        page.wait_for_function("document.querySelector('#reset-button').getAttribute('aria-pressed')==='true'")
+                        assert identities(process.pid) == initial, "NRST replaced the QEMU process"
+                    finally:
+                        page.keyboard.up("Space")
+                    page.wait_for_function("document.querySelector('#reset-button').getAttribute('aria-pressed')==='false'")
+                    page.locator('#channel-tabs mdui-tab[value="uart"]').click()
                     geometry = page.evaluate("""() => ({width:document.documentElement.scrollWidth,
                         height:document.documentElement.scrollHeight,
                         receive:document.querySelector('#uart-rx').getBoundingClientRect().height})""")
@@ -153,17 +229,88 @@ def main():
                     page.screenshot(path=str(args.output / "uart-terminal.png"))
 
                     # Keyboard ownership reaches the native GPIO, then releases it.
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
                     key = page.locator("#key-button").locator("button")
                     key.focus()
                     page.keyboard.down("Space")
                     try:
                         page.wait_for_function("document.querySelector('#key-button').getAttribute('aria-pressed')==='true'")
                         page.wait_for_function("document.querySelector('#led-value').textContent==='#FFFFFF'")
+                        page.wait_for_function("getComputedStyle(document.querySelector('[data-led-core]')).fill==='rgb(255, 255, 255)'")
+                        page.wait_for_function("document.querySelector('#board-model').getAttribute('aria-label')==='三维板卡，LED #FFFFFF'")
+                        page.wait_for_function("async()=>{const s=await(await fetch('/api/state')).json();return s.board.buzzer.frequency_hz===2000}")
+                        page.wait_for_function("window.labAudio?.tones.some(t=>t.frequency.value===2000)")
+                        page.screenshot(path=str(args.output / "board-user-pressed.png"), animations="disabled")
                     finally:
                         page.keyboard.up("Space")
                     page.wait_for_function("document.querySelector('#key-button').getAttribute('aria-pressed')==='false'")
                     page.wait_for_function("document.querySelector('#led-value').textContent==='#000000'")
                     assert page.locator("#board-led").evaluate("element=>getComputedStyle(element).backgroundColor") == "rgb(0, 0, 0)"
+                    page.wait_for_function("async()=>{const s=await(await fetch('/api/state')).json();return s.board.buzzer.frequency_hz===0}")
+                    report["native_buzzer_hz"] = 2000
+                    key.focus()
+                    page.keyboard.down("Space")
+                    try:
+                        page.wait_for_function("document.querySelector('#key-button').getAttribute('aria-pressed')==='true'")
+                        page.locator('#board-mode mdui-segmented-button[value="2d"]').click()
+                        page.wait_for_function("document.querySelector('#key-button').getAttribute('aria-pressed')==='false'")
+                    finally:
+                        page.keyboard.up("Space")
+                    key.focus()
+                    page.keyboard.down("Space")
+                    try:
+                        page.wait_for_function("document.querySelector('#key-button').getAttribute('aria-pressed')==='true'")
+                        page.locator('#channel-tabs mdui-tab[value="uart"]').click()
+                        page.wait_for_function("document.querySelector('#key-button').getAttribute('aria-pressed')==='false'")
+                    finally:
+                        page.keyboard.up("Space")
+                    assert "RED" in uart_text(page), "board navigation lost the terminal screen"
+
+                    # Real SPI/DMA sends dim channels. The number remains raw;
+                    # display conversion uses the independent sRGB transfer curve.
+                    value("#uart-data", "^")
+                    page.locator("#uart-send").click()
+                    page.wait_for_function("document.querySelector('#led-value').textContent==='#010408'")
+                    page.wait_for_function("async()=>{const s=await(await fetch('/api/state')).json();return s.board.buzzer.frequency_hz===2000}")
+                    page.wait_for_function("getComputedStyle(document.querySelector('[data-led-core]')).fill==='rgb(13, 34, 50)'")
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
+                    page.locator("#dock-close").click()
+                    page.locator('#board-mode mdui-segmented-button[value="3d"]').click()
+                    page.locator("#board-fit").click()
+                    page.screenshot(path=str(args.output / "board-dim-led.png"), animations="disabled")
+                    report["dim_led"] = {"raw": "010408", "display_srgb": [13, 34, 50]}
+                    page.locator("#sound-button").click()
+                    page.locator("#sound-volume").evaluate("e=>{e.value=35;e.dispatchEvent(new Event('input'));}")
+                    page.locator("#sound-enabled").click()
+                    page.wait_for_function("window.labAudio.outputGain.gain.value < .001")
+                    assert "dm_mc02_audio=35,1" in page.evaluate("document.cookie")
+                    page.locator("#sound-enabled").click()
+                    page.wait_for_function("Math.abs(window.labAudio.outputGain.gain.value-.35)<.001")
+                    page.locator("#sound-close").click()
+                    report["sound_preference"] = "35,0"
+                    page.locator('#board-mode mdui-segmented-button[value="2d"]').click()
+
+                    # Physical hotspots use the existing peripheral controls.
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
+                    for component, kind in [("vin", "vin"), ("usb", "usb")]:
+                        page.locator(f"#board-part-{component}").click()
+                        page.locator("#board-detail-action").click()
+                        page.wait_for_function("document.querySelector('#peripherals-dialog').open")
+                        assert page.locator("#peripheral-tabs").evaluate("e=>e.value") == kind
+                        page.locator("#peripheral-close").click()
+                    page.locator("#board-part-lcd").click()
+                    page.locator("#board-detail-adc").click()
+                    page.wait_for_function("document.querySelector('#peripherals-dialog').open")
+                    assert page.locator("#peripheral-tabs").evaluate("e=>e.value") == "adc"
+                    assert page.locator("#adc-channel").evaluate("e=>e.value") == "18"
+                    page.locator("#peripheral-close").click()
+                    page.locator("#board-part-led").click()
+                    page.get_by_role("button", name="PA7", exact=True).click()
+                    page.wait_for_function("document.querySelector('#peripherals-dialog').open")
+                    assert page.locator("#gpio-pin").evaluate("e=>e.value") == "A7"
+                    value("#gpio-pin", "B0")
+                    page.locator("#peripheral-close").click()
+                    page.locator('#channel-tabs mdui-tab[value="uart"]').click()
 
                     peripheral("gpio")
                     value("#gpio-level", "1")
@@ -178,23 +325,30 @@ def main():
                     close_peripheral()
                     page.locator("#primary-button").click()
                     page.wait_for_function("document.querySelector('#primary-button').textContent==='继续'")
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
+                    page.wait_for_function("document.querySelector('#board-observation').textContent==='已暂停 · 保留观测'")
+                    page.screenshot(path=str(args.output / "board-paused.png"), animations="disabled")
                     peripheral("adc")
                     page.wait_for_function("document.querySelector('#adc-send').disabled")
                     close_peripheral()
                     page.locator("#primary-button").click()
                     page.wait_for_function("document.querySelector('#primary-button').textContent==='暂停'")
 
-                    page.locator('#channel-tabs mdui-tab[value="can"]').click()
+                    page.locator("#board-part-can1").click()
+                    page.locator("#board-detail-action").click()
+                    assert page.locator("#can-endpoint").evaluate("e=>e.value") == "can1"
                     page.locator("#can-send").click()
                     page.wait_for_function("[...document.querySelectorAll('#can-records tr')].some(row=>row.dataset.direction==='RX'&&row.textContent.includes('0x322'))")
                     rows = page.locator("#can-records tr").all_text_contents()
                     assert any("TX" in row and "0x321" in row and "41 42 43 44 45 46 47 48" in row for row in rows), rows
                     assert any("RX" in row and "0x322" in row and "41 42 43 44 45 46 47 48" in row for row in rows), rows
                     report["can_rows"] = rows
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
+                    page.locator("#board-part-out1").click()
+                    assert page.locator("#can-records tr").all_text_contents() == rows
 
                     page.locator("#settings-button").click()
                     page.wait_for_function("document.querySelector('#settings-dialog').open")
-                    page.locator("#advanced-settings").click()
                     page.locator("#project-timeout").locator("input").fill("80")
                     page.locator("#settings-apply").click()
                     page.wait_for_function("!document.querySelector('#settings-dialog').open")
@@ -220,6 +374,10 @@ def main():
                     assert mobile_can["width"] == 390 and mobile_can["receive"] > 100, mobile_can
                     report["mobile_can_geometry"] = mobile_can
                     page.screenshot(path=str(args.output / "lab-can-390.png"), full_page=True, animations="disabled")
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
+                    page.locator("#board-fit").click()
+                    assert page.evaluate("document.documentElement.scrollWidth") == 390
+                    page.screenshot(path=str(args.output / "board-390.png"), full_page=True, animations="disabled")
                     page.locator('#channel-tabs mdui-tab[value="uart"]').click()
                     page.set_viewport_size({"width": 1366, "height": 768})
 
@@ -303,9 +461,18 @@ def main():
                     page.locator("#stop-button").click()
                     page.wait_for_function("document.querySelector('#session-status').textContent==='已停止'")
                     assert not identities(process.pid), "uploaded experiment stopped before native cleanup"
+                    page.locator('#channel-tabs mdui-tab[value="board"]').click()
+                    page.screenshot(path=str(args.output / "board-stopped.png"), animations="disabled")
+                    page.reload()
+                    page.wait_for_function("!document.querySelector('#primary-button').disabled")
+                    assert page.locator("#sound-volume").evaluate("e=>Number(e.value)") == 35
+                    assert page.locator("#sound-enabled").evaluate("e=>e.checked")
                     assert not report["browser_errors"], report["browser_errors"]
                 except BaseException:
                     try:
+                        report["audio_state"] = page.evaluate("() => ({state:window.labAudio?.state, time:window.labAudio?.currentTime, gain:window.labAudio?.outputGain?.gain.value, cookie:document.cookie})")
+                        report["uart_text"] = uart_text(page)
+                        report["uart_layout"] = page.locator("#uart-rx").evaluate("e=>({html:e.innerHTML.slice(0,4000),width:e.clientWidth,height:e.clientHeight})")
                         page.screenshot(path=str(args.output / "failure.png"), timeout=3000)
                     except Exception as error:
                         report["failure_screenshot_error"] = str(error)

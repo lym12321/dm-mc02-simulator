@@ -1,0 +1,15 @@
+{
+  "upstream": "https://github.com/zeux/meshoptimizer",
+  "version": "1.3.0",
+  "license": "MIT",
+  "distribution": {
+    "version": "1.3.0",
+    "resolved": "https://registry.npmjs.org/meshoptimizer/-/meshoptimizer-1.3.0.tgz",
+    "integrity": "sha512-2oZqMAcEEiCtXWUjIGtZ71oPx1B0ZxYGTqIKsXB1wzWFhleNsCFxQuUJzgCV706bRcwPWtMGf1odmQvAcqKkIw==",
+    "dev": true,
+    "license": "MIT"
+  },
+  "build": "npm ci && npm run bundle (apps/lab/tools/board-model)",
+  "local_changes": "Unmodified meshoptimizer/decoder (embedded WASM) bundled into vendor/three.js. No runtime fetch or workers.",
+  "sha256": "80460f025ee4915ee056d27552a6e6bb789b3b6bdfa17b3ad5aa178e9eabe2c3"
+}

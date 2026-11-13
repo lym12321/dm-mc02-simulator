@@ -47,13 +47,23 @@ pub(super) fn decode(action: &str, args: &Value) -> Result<BoardCommand> {
                 BoardCommand::UsbDetach
             }
         }
-        "key" => {
+        "key" | "reset" => {
             fields(args, &["pressed"])?;
-            BoardCommand::Input(LabInput::Key(
-                args["pressed"]
-                    .as_bool()
-                    .ok_or_else(|| refused("pressed must be a boolean"))?,
-            ))
+            let pressed = args["pressed"]
+                .as_bool()
+                .ok_or_else(|| refused("pressed must be a boolean"))?;
+            BoardCommand::Input(if action == "key" {
+                LabInput::Key(pressed)
+            } else {
+                LabInput::Reset(pressed)
+            })
+        }
+        "pose" => {
+            fields(args, &["orientation_xyzw"])?;
+            let value: [f64; 4] = serde_json::from_value(args["orientation_xyzw"].clone())
+                .map_err(|_| refused("orientation_xyzw requires four finite numbers"))?;
+            let normalized = super::pose::quaternion(value).map_err(|e| refused(e.to_string()))?;
+            BoardCommand::Input(LabInput::Pose(normalized.to_array()))
         }
         "gpio" => {
             fields(args, &["pin", "level"])?;

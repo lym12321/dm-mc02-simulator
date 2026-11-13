@@ -6,6 +6,7 @@ mod firmware_image;
 mod ide_export;
 pub mod input;
 pub mod interactive;
+pub mod pose;
 #[cfg(feature = "lab-session")]
 mod presentation;
 pub mod project;

@@ -8,14 +8,14 @@ use crate::{
     can::CanFrame,
     launch,
     native_process::{NativeProcess, ProcessOptions},
-    qmp::{commands, QmpSession, QueryVirtualExecution},
+    qmp::{QmpSession, QueryVirtualExecution, commands},
     transports::{fixed84::CanStream, stream::StreamTransport},
 };
 use futures::FutureExt;
 #[cfg(unix)]
-use rustix::event::{poll, PollFd, PollFlags, Timespec};
+use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sim_core::{Error, Failure, Result};
 #[cfg(windows)]
 use std::net::TcpStream as NativeStream;
@@ -27,8 +27,8 @@ use std::{
     future::Future,
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -129,19 +129,22 @@ impl LabOptions {
         Ok((firmware, qemu))
     }
 }
-/// A stationary board fixture; it does not provide calibrated physical motion.
+/// Source of the single-board IMU input.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ImuMode {
     #[default]
     Off,
     Stationary,
+    BoardPose,
 }
 #[derive(Clone, Debug)]
 pub enum LabInput {
     Uart { endpoint: String, data: Vec<u8> },
     Can { endpoint: String, frame: CanFrame },
     Key(bool),
+    Reset(bool),
+    Pose([f64; 4]),
     Gpio { pin: String, level: bool },
     Adc { channel: u16, value: AdcValue },
 }
@@ -205,6 +208,7 @@ pub struct ConnectedLab<'a> {
     cancellation: Option<Arc<AtomicBool>>,
     adc: bool,
     imu: ImuMode,
+    pose: super::pose::BoardPose,
     gdb_enabled: bool,
     auto_user_release_ns: Option<u64>,
     usb: Option<crate::usbip::Exporter<'a, NativeStream>>,
@@ -304,6 +308,16 @@ impl ConnectedLab<'_> {
     pub fn set_vin(&mut self, millivolts: u32) -> Result<()> {
         self.set_property("vin-mv", json!(millivolts.to_string()))
     }
+    pub fn motion_state(&self, timestamp_ns: u64) -> Result<Value> {
+        let sample = self.pose.sample(timestamp_ns)?;
+        Ok(
+            json!({"mode": self.imu, "timestamp_ns": timestamp_ns.to_string(),
+            "orientation_xyzw": sample.orientation_xyzw,
+            "gyro_rad_s": sample.imu.gyro_rad_s, "accel_m_s2": sample.imu.accel_m_s2,
+            "origin_view_m": [0.0, -0.000906120897, 0.0],
+            "body_to_view_xyzw": [-std::f64::consts::FRAC_1_SQRT_2, 0.0, 0.0, std::f64::consts::FRAC_1_SQRT_2]}),
+        )
+    }
     /// Apply one already decoded command. Input timestamps describe host
     /// admission, never guest consumption.
     pub fn apply(&mut self, command: BoardCommand) -> Result<Option<u64>> {
@@ -380,21 +394,23 @@ impl ConnectedLab<'_> {
                 .reset_input(stamp)
                 .map_err(|error| error as Failure)?;
         }
-        if self.imu == ImuMode::Stationary
+        if self.imu != ImuMode::Off
             && self.command(commands::query_status {})?.running
             && self
                 .channels
                 .input_available_at(stamp)
                 .map_err(|error| error as Failure)?
         {
+            let sample = if self.imu == ImuMode::BoardPose {
+                self.pose.sample(stamp)?.imu
+            } else {
+                crate::signals::ImuSample {
+                    gyro_rad_s: [0.0; 3],
+                    accel_m_s2: [0.0, 0.0, 9.80665],
+                }
+            };
             self.channels
-                .send_imu(
-                    &crate::signals::ImuSample {
-                        gyro_rad_s: [0.0; 3],
-                        accel_m_s2: [0.0, 0.0, 9.80665],
-                    },
-                    stamp,
-                )
+                .send_imu(&sample, stamp)
                 .map_err(|error| error as Failure)?;
         }
         Ok((after, events))
@@ -457,11 +473,19 @@ impl ConnectedLab<'_> {
     }
     /// Returned time observes admission; it does not attest guest consumption.
     pub fn inject(&mut self, input: LabInput) -> Result<u64> {
+        if let LabInput::Pose(value) = &input {
+            if self.imu != ImuMode::BoardPose {
+                return Err(admission("board pose requires board_pose IMU input"));
+            }
+            super::pose::quaternion(*value)?;
+        }
         if let LabInput::Gpio { pin, .. } = &input {
             boards::gpio_pin(pin)?;
         }
         let mut stamp = self.snapshot()?["timestamp_ns"].as_u64().unwrap();
         match input {
+            LabInput::Pose(value) => self.pose.target(value, stamp)?,
+            LabInput::Reset(pressed) => self.set_property("reset-key", json!(pressed))?,
             LabInput::Uart { endpoint, data } => self
                 .channels
                 .send_uart(&endpoint, &data)
@@ -687,6 +711,7 @@ pub(super) fn with_firmware_image<T>(
             cancellation: options.cancellation.clone(),
             adc: options.adc,
             imu: options.imu,
+            pose: boards::dm_mc02_pose()?,
             gdb_enabled: options.gdb_port.is_some(),
             auto_user_release_ns: None,
             usb: usb_stream
