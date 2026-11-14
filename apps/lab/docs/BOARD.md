@@ -28,6 +28,9 @@ BUZZER1 使用 PB15/TIM12_CH2 的频率和占空比，GPIO 连续翻转也可产
 PA7 路由依据 ST DS13313 rev5 Table 8：TIM1_CH1N/AF1、TIM3_CH2/AF2、TIM8_CH1N/AF3、SPI1_MOSI/AF5。
 TIM 使用当前时钟、PSC/ARR/CCR、极性、预装载和互补死区产生电平；SPI1 使用 RCC 内核时钟、MBR、数据位宽、位序及帧间隔串行输出。
 SPI1 TX 提供 16-byte FIFO、4–32-bit 帧、packed writes、EOT/IRQ35，以及两个 DMA controller 上的 DMAMUX request 38。
+SPI 相邻同电平位合并调度，保留电平变化与帧完成事件；FIFO、DMA 和 EOT 仍按帧推进。
+LED 的复位检查跨脉冲复用一次预约，到点重新判断低电平持续时间。GPIO 复用已选引脚路由，模式或 AF 改变时更新。
+TIM8 各种 PSC/ARR 配置共用通用定时器事件路径。
 GPIO 的推挽、开漏和上下拉决定最终 DIN 电平。无效脉冲、半帧和断开保留最后锁存颜色并计入 `errors`；供电变化清空锁存状态。
 
 原理图将 LED3 标为 `WS2812B-3528`。当前时序配置名为 `worldsemi-ws2812b-classic`，依据
